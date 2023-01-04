@@ -1,4 +1,4 @@
-import './App.css';
+import './App.scss';
 import { Renderer } from './components/renderer';
 
 const App = () => {
