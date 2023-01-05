@@ -12,6 +12,7 @@ export const Renderer = () => {
           position: initialCameraPosition.clone(),
         }}
       >
+        <color attach="background" args={['#e6e6e6']} />
         <MyScene />
       </Canvas>
     </div>
