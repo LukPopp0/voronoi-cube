@@ -9,7 +9,7 @@ export const MyScene = () => {
       <Lighting />
       <Controls />
       <VoronoiCube />
-      <RandomPoints />
+      <RandomPoints seed={0} minDistance={7} />
     </>
   );
 };
