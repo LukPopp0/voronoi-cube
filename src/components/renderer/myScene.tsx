@@ -1,5 +1,6 @@
 import { Controls } from './controls';
 import { Lighting } from './lighting';
+import { RandomPoints } from './randomPoints';
 import { VoronoiCube } from './voronoiCube';
 
 export const MyScene = () => {
@@ -8,6 +9,7 @@ export const MyScene = () => {
       <Lighting />
       <Controls />
       <VoronoiCube />
+      <RandomPoints />
     </>
   );
 };
