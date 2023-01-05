@@ -42,6 +42,7 @@ module.exports = {
       'single',
       { avoidEscape: true, allowTemplateLiterals: false },
     ],
+    'react/no-unknown-property': 'off',
     'react/react-in-jsx-scope': 'off',
     curly: ['warn', 'multi-line'],
     eqeqeq: 'error',
