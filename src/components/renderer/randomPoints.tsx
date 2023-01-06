@@ -1,9 +1,9 @@
-import { Points } from '@react-three/drei';
 import { useMemo } from 'react';
 import {
   cubeDistributionRestricted,
   sphereDistributionRestricted,
 } from '../../utils/randomDistributions';
+import { BufferGeomPoints } from '../geometries/bufferGeomPoints';
 
 type RandomPointsProps = {
   nPoints?: number;
@@ -30,12 +30,12 @@ export const RandomPoints = ({
 
   return (
     <>
-      <Points positions={pointsSphereRestricted}>
+      <BufferGeomPoints positions={pointsSphereRestricted}>
         <pointsMaterial color={'#00ffff'} />
-      </Points>
-      <Points positions={pointsCubeRestricted}>
+      </BufferGeomPoints>
+      <BufferGeomPoints positions={pointsCubeRestricted}>
         <pointsMaterial color={'#ffff00'} />
-      </Points>
+      </BufferGeomPoints>
     </>
   );
 };
