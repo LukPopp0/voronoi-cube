@@ -51,4 +51,4 @@ jobs:
         uses: JamesIves/github-pages-deploy-action@v4.4.1
         with:
           # creates hidden "gh-pages" branch from this to keep main clean
-          folder: build # build target of npm
+          folder: dist # build target of npm
