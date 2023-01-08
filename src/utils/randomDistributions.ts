@@ -45,6 +45,11 @@ export const sphereDistributionRestricted = (
   seed?: number,
   minDistance = 0
 ): [number, number, number][] => {
+  // TODO: Better distribution/how do I make sure the bottom has enough distance to the points
+  // - Restrict phi to be in [-45, 90] deg instead of [-90, 90] deg
+  // - Better distribution:
+  //    - Divide remaining sphere into `n` areas
+  //    - In each area, spawn one point randomly
   const random = new MersenneTwister(seed);
   const points: [number, number, number][] = [];
 

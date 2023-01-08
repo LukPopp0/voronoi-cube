@@ -1,6 +1,7 @@
 import { BlockIterator } from './blockIterator';
 import { VBase } from './vBase';
 import { VCell } from './vCell';
+import { VCompute } from './vCompute';
 
 export class VContainer extends VBase {
   /** The minimum x coordinate of the container. */
@@ -17,10 +18,10 @@ export class VContainer extends VBase {
   zMax: number;
   /** Array containing the particle positions. */
   pPositions: [number, number, number][] = [];
-  /** Array containing the particle ids. */
-  pIDs: number[] = [];
+  /** Array storing the particle ids for each block */
+  partIDsInBlocks: number[][] = [];
   /** Array storing the number of particles within each block */
-  particlesInBlocks: number[] = [];
+  partsInBlocks: number[] = [];
   /** Array containing the voronoi cells for the container and the particles */
   #cells: VCell[] | undefined = undefined;
 
@@ -43,7 +44,8 @@ export class VContainer extends VBase {
     this.xMax = xMax;
     this.yMax = yMax;
     this.zMax = zMax;
-    this.particlesInBlocks = new Array(nx * ny * nz).fill(0);
+    this.partsInBlocks = Array(nx * ny * nz).fill(0);
+    this.partIDsInBlocks = [...Array(nx * ny * nz)].map(x => []);
   }
 
   /**
@@ -51,9 +53,8 @@ export class VContainer extends VBase {
    * @param points The positions of the particles for the container.
    */
   setParticles(points: [number, number, number][]): void {
-    this.pPositions = new Array(points.length);
+    this.pPositions = Array(points.length);
     points.forEach((v, i) => (this.pPositions[i] = [...v]));
-    this.pIDs = [...Array(points.length).keys()];
 
     this.#putParticlesInBlocks();
   }
@@ -71,10 +72,13 @@ export class VContainer extends VBase {
       return i + this.nx * j + this.nxy * k;
     };
 
-    const nParticles = this.pIDs.length;
+    const nParticles = this.pPositions.length;
     for (let n = 0; n < nParticles; ++n) {
       const ijk = putParticle(this.pPositions[n][0], this.pPositions[n][1], this.pPositions[n][2]);
-      if (ijk >= 0) this.particlesInBlocks[ijk]++;
+      if (ijk >= 0) {
+        this.partIDsInBlocks[ijk].push(n);
+        this.partsInBlocks[ijk]++;
+      }
     }
   }
 
@@ -90,17 +94,18 @@ export class VContainer extends VBase {
 
   #computeCells(): void {
     const it = new BlockIterator(this.nx, this.ny, this.nz);
-    this.#cells = new Array(this.pPositions.length);
+    this.#cells = Array(this.pPositions.length);
 
-    if (it.start(this.particlesInBlocks)) {
+    let cellNr = 0;
+    if (it.start(this.partsInBlocks)) {
+      const compute = new VCompute(this);
+      console.log('||||||||||||||||||||||||||||||||||||||||||||||');
+      console.log('||||||||||||||| Computing Cells ||||||||||||||');
+      console.log('||||||||||||||||||||||||||||||||||||||||||||||');
+      console.log(this.partsInBlocks);
       do {
-        this.#computeCell(it);
-      } while (it.increase(this.particlesInBlocks));
+        this.#cells[cellNr++] = compute.computeCell(it);
+      } while (it.increase(this.partsInBlocks));
     }
-  }
-
-  #computeCell(it: BlockIterator): VCell {
-    // TODO
-    return new VCell();
   }
 }

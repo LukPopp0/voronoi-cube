@@ -39,7 +39,7 @@ export class BlockIterator extends VBase {
       (this.i = 0), this.j++;
       if (this.j === this.ny) {
         (this.j = 0), this.k++;
-        if ((this.ijk = this.nx * this.ny * this.nz)) return false;
+        if (this.ijk === this.nx * this.ny * this.nz) return false;
       }
     }
     return true;
@@ -51,12 +51,16 @@ export class BlockIterator extends VBase {
    * @returns True if there is another particle.
    */
   increase(particlesInBlocks: number[]): boolean {
+    console.log('');
     this.q++;
     if (this.q >= particlesInBlocks[this.ijk]) {
+      console.log('\n');
+      console.log('----- Increasing block -----');
       this.q = 0;
       do {
         if (!this.nextBlock()) return false;
       } while (particlesInBlocks[this.ijk] === 0);
+      console.log(`Going to block ${this.ijk} with ${particlesInBlocks[this.ijk]} particles.`);
     }
     return true;
   }
