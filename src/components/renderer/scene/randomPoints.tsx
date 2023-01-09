@@ -2,9 +2,9 @@ import { useMemo } from 'react';
 import {
   cubeDistributionRestricted,
   sphereDistributionRestricted,
-} from '../../utils/randomDistributions';
-import { VContainer } from '../../utils/voronoi';
-import { BufferGeomPoints } from '../geometries/bufferGeomPoints';
+} from '../../../utils/randomDistributions';
+import { VContainer } from '../../../utils/voronoi';
+import { BufferGeomPoints } from '../../geometries/bufferGeomPoints';
 
 type RandomPointsProps = {
   nPoints?: number;
