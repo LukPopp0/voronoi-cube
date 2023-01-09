@@ -10,7 +10,7 @@ type MySceneProps = {
 };
 
 export const MyScene = ({ rotationSpeed = 0 }: MySceneProps) => {
-  const { nPoints, size, seed, minDistance } = useVoronoiStore(state => state.pointDistribution);
+  const { nPoints, size, seed, restriction } = useVoronoiStore(state => state.pointDistribution);
 
   return (
     <>
@@ -18,7 +18,7 @@ export const MyScene = ({ rotationSpeed = 0 }: MySceneProps) => {
       <Controls />
       <ModelGroup rotationSpeed={rotationSpeed}>
         <VoronoiCube size={size} />
-        <RandomPoints nPoints={nPoints} size={size} seed={seed} minDistance={minDistance} />
+        <RandomPoints nPoints={nPoints} size={size} seed={seed} restriction={restriction} />
       </ModelGroup>
     </>
   );

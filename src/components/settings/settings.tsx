@@ -34,13 +34,19 @@ export const Settings = () => {
         />
       </div>
       <div className="preference">
-        <label htmlFor="minDistance">Minimum Point Distance</label>
-        <input
-          name="minDistance"
-          type="number"
-          value={pointDistribution.minDistance}
-          onChange={e => setPointDistribution({ minDistance: Number.parseFloat(e.target.value) })}
-        />
+        <label htmlFor="restriction">Restriction</label>
+        <div>
+          <input name="restriction" disabled value={pointDistribution.restriction} />
+          <input
+            name="restriction"
+            type="range"
+            min={0}
+            max={1}
+            step={0.1}
+            value={pointDistribution.restriction}
+            onChange={e => setPointDistribution({ restriction: Number.parseFloat(e.target.value) })}
+          />
+        </div>
       </div>
     </div>
   );

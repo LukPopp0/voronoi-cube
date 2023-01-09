@@ -4,7 +4,7 @@ interface IPointDistribution {
   nPoints: number;
   size: number;
   seed: number;
-  minDistance: number;
+  restriction: number;
 }
 
 interface IVoronoiSettings {
@@ -17,7 +17,7 @@ export const useVoronoiStore = create<IVoronoiSettings>(set => ({
     nPoints: 12,
     size: 10,
     seed: 1,
-    minDistance: 0,
+    restriction: 0,
   },
   setPointDistribution: (data: Partial<IPointDistribution>) =>
     set(state => ({

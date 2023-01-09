@@ -43,6 +43,7 @@ module.exports = {
       { avoidEscape: true, allowTemplateLiterals: false },
     ],
     'import/newline-after-import': ['warn', { count: 1 }],
+    'jsx-a11y/no-static-element-interactions': 'off',
     'react/no-unknown-property': 'off',
     'react/react-in-jsx-scope': 'off',
     curly: ['warn', 'multi-line'],

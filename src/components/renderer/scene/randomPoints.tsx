@@ -10,14 +10,14 @@ type RandomPointsProps = {
   nPoints?: number;
   size?: number;
   seed?: number;
-  minDistance?: number;
+  restriction?: number;
 };
 
 export const RandomPoints = ({
   nPoints = 12,
   size = 10,
   seed = 1,
-  minDistance = 0,
+  restriction: minDistance = 0,
 }: RandomPointsProps) => {
   const pointsSphereRestricted = useMemo(
     () => sphereDistributionRestricted(nPoints, size / 2, seed, minDistance),
@@ -46,7 +46,7 @@ export const RandomPoints = ({
     console.log('Set particles');
     const cells = container.getCells();
     console.log('Got Cells: ', cells);
-  }, [pointsCubeRestricted]);
+  }, [pointsCubeRestricted, size]);
 
   return (
     <>

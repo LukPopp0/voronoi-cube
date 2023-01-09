@@ -4,7 +4,7 @@ import { MyScene } from './scene/myScene';
 import './renderer.scss';
 import { useState } from 'react';
 
-const baseSpeed = 0.75;
+const baseSpeed = 0.25;
 
 export const Renderer = () => {
   const [rotationSpeed, setRotationSpeed] = useState<number>(baseSpeed);
