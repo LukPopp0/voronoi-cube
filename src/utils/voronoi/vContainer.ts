@@ -1,4 +1,3 @@
-import { BlockIterator } from './blockIterator';
 import { VBase } from './vBase';
 import { VCell } from './vCell';
 import { VCompute } from './vCompute';
@@ -54,6 +53,9 @@ export class VContainer extends VBase {
    */
   setParticles(points: [number, number, number][]): void {
     this.pPositions = Array(points.length);
+    points.forEach((v, i) =>
+      console.log(`Adding: ${v[0].toFixed(5)} \t${v[1].toFixed(5)} \t${v[2].toFixed(5)}`)
+    );
     points.forEach((v, i) => (this.pPositions[i] = [...v]));
 
     this.#putParticlesInBlocks();
@@ -93,19 +95,27 @@ export class VContainer extends VBase {
   }
 
   #computeCells(): void {
-    const it = new BlockIterator(this.nx, this.ny, this.nz);
     this.#cells = Array(this.pPositions.length);
 
+    // Iterate over all computation blocks and then all particles within each block.
+    // Compute cell for each particle in order.
     let cellNr = 0;
-    if (it.start(this.partsInBlocks)) {
-      const compute = new VCompute(this);
-      console.log('||||||||||||||||||||||||||||||||||||||||||||||');
-      console.log('||||||||||||||| Computing Cells ||||||||||||||');
-      console.log('||||||||||||||||||||||||||||||||||||||||||||||');
-      console.log(this.partsInBlocks);
-      do {
-        this.#cells[cellNr++] = compute.computeCell(it);
-      } while (it.increase(this.partsInBlocks));
+    const compute = new VCompute(this);
+    for (let ijk = 0; ijk < this.partIDsInBlocks.length; ++ijk) {
+      for (let q = 0; q < this.partIDsInBlocks[ijk].length; ++q) {
+        const k = Math.floor(ijk / this.nxy),
+          ijkt = ijk - this.nxy * k,
+          j = Math.floor(ijkt / this.nx),
+          i = ijkt - j * this.nx;
+        this.#cells[cellNr++] = compute.computeCell({ ijk, q, i, j, k });
+      }
     }
+
+    // if (it.start(this.partsInBlocks)) {
+    //   console.log(this.partsInBlocks);
+    //   do {
+    //     // unnecessary?
+    //   } while (it.increase(this.partsInBlocks));
+    // }
   }
 }

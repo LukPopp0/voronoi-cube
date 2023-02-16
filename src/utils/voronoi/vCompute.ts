@@ -1,4 +1,3 @@
-import { BlockIterator } from './blockIterator';
 import { VCell } from './vCell';
 import { VContainer } from './vContainer';
 
@@ -10,12 +9,37 @@ export class VCompute {
     this.con = c;
   }
 
-  computeCell(it: BlockIterator): VCell {
+  /**
+   * Compute a cell for a particle inside a block.
+   * @param params Cell parameters
+   *  - ijk: Index of the current block.
+   *  - q: Index of the particle inside the block.
+   * @returns Voronoi Cell
+   */
+  computeCell(particleInfo: { ijk: number; q: number; i: number; j: number; k: number }): VCell {
+    const { ijk, q, i, j, k } = particleInfo;
     const countList = [7, 11, 15, 19, 26, 35, 45, 59];
+    // let countE: number;
+    //   x1 = -1,
+    //   y1 = -1,
+    //   z1 = -1,
+    //   qx = 0,
+    //   qy = 0,
+    //   qz = 0;
+    // let xlo, ylo, zlo, xhi, yhi, zhi, x2, y2, z2, rs;
+    // let di, dj, dk, ei, ej, ek, f, g, l, disp;
+    // let fx, fy, fz, gxs, gys, gzs, radp;
+    // let q, e, mijk;
 
     // Initialize the voronoi cell
-    const cell = new VCell();
-    cell.initialize(this.con, it);
+    const cell = new VCell(this.con, particleInfo);
+    const disp = ijk - i - this.con.nx * (j + this.con.ny * k);
+    console.log('\n-------- compute_cell --------');
+    console.log(`ijk  : ${ijk}`);
+    console.log(`q    : ${q}`);
+    console.log(`ci cj ck: ${i} ${j} ${k}`);
+    console.log(`x y z   : ${cell.particle[0]} ${cell.particle[1]} ${cell.particle[2]}`);
+    console.log(`disp    : ${disp}`);
 
     // Cut the cell by any wall objects that have been added
 
@@ -31,6 +55,6 @@ export class VCompute {
     // apply the plane routine for all of its particles and add neighboring regions to the end of
     // the list that need to be tested. Continue until the list has no elements left.
 
-    return new VCell();
+    return cell;
   }
 }

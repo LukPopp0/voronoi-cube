@@ -1,35 +1,56 @@
-import { BlockIterator } from './blockIterator';
 import { VContainer } from './vContainer';
+
+const initVertexOrder = 64;
+const initVertices = 256;
 
 export class VCell {
   /** The total number of vertices for the cell. */
   nVerts = 0;
-  particle: [number, number, number];
+  /** Position of the particle for the cell. */
+  particle: [number, number, number] = [0, 0, 0];
   /** The positions of the vertices */
   verts: [number, number, number][] = [];
+  /** Two dimensional array containing edge information. */
+  edgeInfo: number[][] = [];
+  /** Sets the maximum order of a vertex. */
+  currentVertexOrder = initVertexOrder;
+  up = 0;
 
-  constructor() {
-    this.particle = [0, 0, 0];
+  constructor(
+    con: VContainer,
+    particleInfo: { ijk: number; q: number; i: number; j: number; k: number }
+  ) {
+    this.#initialize(con, particleInfo);
   }
 
-  initialize(con: VContainer, it: BlockIterator) {
+  #initBase(xmin: number, xmax: number, ymin: number, ymax: number, zmin: number, zmax: number) {}
+
+  #initialize(
+    con: VContainer,
+    particleInfo: { ijk: number; q: number; i: number; j: number; k: number }
+  ) {
     // Get the right particle
-    const partID = con.partIDsInBlocks[it.ijk][it.q];
+    const { ijk, q, i, j, k } = particleInfo;
+    const partID = con.partIDsInBlocks[ijk][q];
     this.particle = con.pPositions[partID];
-    console.log('VCell init', { con, it });
-    console.log('Particle: ', this.particle);
 
     // Min. and max. coordinates of the cell relative to the particle position
-    const x1 = con.xMin - this.particle[0];
-    const x2 = con.xMax - this.particle[0];
-    const y1 = con.yMin - this.particle[1];
-    const y2 = con.yMax - this.particle[1];
-    const z1 = con.zMin - this.particle[2];
-    const z2 = con.zMax - this.particle[2];
+    const xmin = con.xMin - this.particle[0];
+    const xmax = con.xMax - this.particle[0];
+    const ymin = con.yMin - this.particle[1];
+    const ymax = con.yMax - this.particle[1];
+    const zmin = con.zMin - this.particle[2];
+    const zmax = con.zMax - this.particle[2];
+    this.#initBase(xmin, xmax, ymin, ymax, zmin, zmax);
+
+    // Init rectangular box with given dimensions
 
     // TODO: Initialize vertices of box as rectangle
 
-    // ???
-    const disp = it.ijk - it.i - con.nx * (it.j + con.ny * it.k);
+    // TODO: Remove if not used anymore
+    // ! Unused
+    // Displacement
+    const disp = ijk - i - con.nx * (j + con.ny * k);
+    return disp;
   }
 }

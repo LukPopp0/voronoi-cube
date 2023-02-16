@@ -38,12 +38,32 @@ export const RandomPoints = ({
 
   const voronoi = useMemo(() => {
     console.log('\nCREATING VORONOI\n');
+    console.log({ pointsCubeRestricted });
     // Create points
     const half = size / 2;
     const container = new VContainer(-half, -half, -half, half, half, half, 2, 2, 2);
     console.log({ container });
+
+    console.log('\n\nAdding particles.\n\n');
+
     container.setParticles(pointsCubeRestricted);
-    console.log('Set particles');
+
+    console.log('\n\nChecking partsInBlocks.\n\n');
+
+    for (let i = 0; i < container.nx; ++i) {
+      for (let j = 0; j < container.ny; ++j) {
+        for (let k = 0; k < container.nz; ++k) {
+          const ijk = k * container.nx * container.ny + j * container.nx + i;
+          const nParts = container.partsInBlocks[ijk];
+
+          console.log(`Block ${ijk}: ${nParts} particle(s)`);
+
+          container.partIDsInBlocks[ijk].forEach((v, i) => console.log(`      ${i}: ${v}`));
+        }
+      }
+    }
+
+    console.log(container.partsInBlocks);
     const cells = container.getCells();
     console.log('Got Cells: ', cells);
   }, [pointsCubeRestricted, size]);

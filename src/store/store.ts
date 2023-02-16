@@ -16,8 +16,8 @@ export const useVoronoiStore = create<IVoronoiSettings>(set => ({
   pointDistribution: {
     nPoints: 12,
     size: 10,
-    seed: 1,
-    restriction: 0,
+    seed: 0,
+    restriction: 1,
   },
   setPointDistribution: (data: Partial<IPointDistribution>) =>
     set(state => ({
