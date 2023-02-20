@@ -110,12 +110,5 @@ export class VContainer extends VBase {
         this.#cells[cellNr++] = compute.computeCell({ ijk, q, i, j, k });
       }
     }
-
-    // if (it.start(this.partsInBlocks)) {
-    //   console.log(this.partsInBlocks);
-    //   do {
-    //     // unnecessary?
-    //   } while (it.increase(this.partsInBlocks));
-    // }
   }
 }

@@ -43,7 +43,7 @@ export class VCompute {
 
     // Cut the cell by any wall objects that have been added
 
-    // Apply place cuts to the cell corresponding to the other particles within the current region.
+    // Apply plane cuts to the cell corresponding to the other particles within the current region.
 
     // Test over pre-computed worklist of neighboring regions that have been ordered by distance
     // away from the particles's position. Apply radius tests after every few regions to see if
