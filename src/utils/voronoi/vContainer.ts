@@ -90,12 +90,12 @@ export class VContainer extends VBase {
    */
   getCells(): VCell[] {
     if (this.pPositions.length === 0) return [];
-    if (!this.#cells) this.#computeCells();
+    if (!this.#cells || this.#cells.length === 0) this.#computeCells();
     return this.#cells || [];
   }
 
   #computeCells(): void {
-    this.#cells = Array(this.pPositions.length);
+    this.#cells = [];
 
     // Iterate over all computation blocks and then all particles within each block.
     // Compute cell for each particle in order.
@@ -107,7 +107,8 @@ export class VContainer extends VBase {
           ijkt = ijk - this.nxy * k,
           j = Math.floor(ijkt / this.nx),
           i = ijkt - j * this.nx;
-        this.#cells[cellNr++] = compute.computeCell({ ijk, q, i, j, k });
+        const cell = compute.computeCell({ ijk, q, i, j, k });
+        if (cell) this.#cells[cellNr++] = cell;
       }
     }
   }
