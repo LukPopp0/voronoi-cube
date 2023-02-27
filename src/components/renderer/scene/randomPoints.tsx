@@ -5,6 +5,7 @@ import {
 } from '../../../utils/randomDistributions';
 import { VContainer } from '../../../utils/voronoi';
 import { BufferGeomPoints } from '../../geometries/bufferGeomPoints';
+import { Cell } from '../../voronoi/Cell';
 
 type RandomPointsProps = {
   nPoints?: number;
@@ -36,12 +37,23 @@ export const RandomPoints = ({
     [pointsCubeRestricted]
   );
 
-  const voronoi = useMemo(() => {
+  const voronoiCells = useMemo(() => {
     console.log('\nCREATING VORONOI\n');
     console.log({ pointsCubeRestricted });
     // Create points
-    const half = size / 2;
-    const container = new VContainer(-half, -half, -half, half, half, half, 2, 2, 2);
+    const halfSize = size / 2;
+    const numBlocks = 1;
+    const container = new VContainer(
+      -halfSize,
+      -halfSize,
+      -halfSize,
+      halfSize,
+      halfSize,
+      halfSize,
+      numBlocks,
+      numBlocks,
+      numBlocks
+    );
     console.log({ container });
 
     console.log('\n\nAdding particles.\n\n');
@@ -66,6 +78,8 @@ export const RandomPoints = ({
     console.log(container.partsInBlocks);
     const cells = container.getCells();
     console.log('Got Cells: ', cells);
+
+    return cells.map((c, i) => <Cell key={i} cell={c} />);
   }, [pointsCubeRestricted, size]);
 
   return (
@@ -76,6 +90,7 @@ export const RandomPoints = ({
       <BufferGeomPoints positions={typedPointsCubeArray}>
         <pointsMaterial color={'#ffff00'} />
       </BufferGeomPoints>
+      {voronoiCells}
     </>
   );
 };
