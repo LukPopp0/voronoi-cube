@@ -49,6 +49,7 @@ module.exports = {
     curly: ['warn', 'multi-line'],
     eqeqeq: 'error',
     'prefer-arrow-callback': 'error',
+    'prefer-const': 'warn',
     'prettier/prettier': ['error', { printWidth: 100 }],
   },
 };
