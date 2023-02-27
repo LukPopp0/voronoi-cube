@@ -53,9 +53,7 @@ export class VContainer extends VBase {
    */
   setParticles(points: [number, number, number][]): void {
     this.pPositions = Array(points.length);
-    points.forEach((v, i) =>
-      console.log(`Adding: ${v[0].toFixed(5)} \t${v[1].toFixed(5)} \t${v[2].toFixed(5)}`)
-    );
+    points.forEach((v, i) => console.log(`Adding: ${v[0]} \t${v[1]} \t${v[2]}`));
     points.forEach((v, i) => (this.pPositions[i] = [...v]));
 
     this.#putParticlesInBlocks();

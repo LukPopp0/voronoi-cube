@@ -128,15 +128,115 @@ export class VCell {
   cutPlane(planeParams: { x: number; y: number; z: number; rs: number }, pId: number): boolean {
     // TODO: Check if it is even needed to pass in rs and pId
     const { x, y, z, rs } = planeParams;
+    let complicatedSetup = false;
+
     console.log(
       `\nCutting plane w/: ${x.toFixed(5)} ${y.toFixed(5)} ${z.toFixed(5)} ${rs.toFixed(5)} ${pId}`
     );
-    const testIndex = 0;
-    const uw = this.#testPoint(planeParams, testIndex);
-    console.log(`First test result: ${uw.scalarProduct} ${uw.inOutOn}`);
 
     // Test approximately sqrt(n)/4 points for their proximity to the plane
     // and keep the one which is closest
+    let testVert = 0;
+    let { inOutOn, distRep } = this.#testPoint(planeParams, testVert);
+
+    console.log(`First test result: ${distRep} ${inOutOn}`);
+
+    // Starting from an initial guess, we now move from vertex to vertex,
+    // to try and find an edge which intersects the cutting plane,
+    // or a vertex which is on the plane
+    let conIdx = 0;
+    let conPosIdxA, conPosIdxB: number | undefined;
+    let conVertA, conVertB: number | undefined;
+    let inOutOnA, inOutOnB: number | undefined;
+    let distRepA, distRepB: number | undefined;
+    try {
+      if (inOutOn === 1) {
+        // Test point is inside the cutting plane
+
+        // Find first connection that is closer to the plane
+        do {
+          conVertA = this.edgeInfo[testVert][conIdx];
+          const result = this.#testPoint(planeParams, conVertA);
+          inOutOnA = result.inOutOn;
+          distRepA = result.distRep;
+
+          console.log(`inOutOn = 1 - testing ${conIdx}. connected vertex`);
+          console.log(`m_test result: ${distRepA} ${inOutOnA}`);
+
+          if (distRepA < distRep) break;
+          conIdx++;
+        } while (conIdx < this.vertOrder[testVert]);
+
+        // If the distance representation of the first
+        if (conIdx === this.vertOrder[testVert]) {
+          return false;
+        }
+
+        // Iterate until the next point is not on the same side of the plane anymore
+        conPosIdxA = this.edgeInfo[testVert][this.vertOrder[testVert] + conIdx];
+        while (inOutOnA === 1) {
+          // if (++count >= tot_num_verts) throw true;
+          distRep = distRepA;
+          testVert = conVertA;
+          for (conIdx = 0; conIdx < conPosIdxA; conIdx++) {
+            conVertA = this.edgeInfo[testVert][conIdx];
+            const result = this.#testPoint(planeParams, conVertA);
+            inOutOnA = result.inOutOn;
+            distRepA = result.distRep;
+
+            if (distRepA < distRep) break;
+          }
+          if (conIdx === conPosIdxA) {
+            conIdx++;
+            while (conIdx < this.vertOrder[testVert]) {
+              conVertA = this.edgeInfo[testVert][conIdx];
+              const result = this.#testPoint(planeParams, conVertA);
+              inOutOnA = result.inOutOn;
+              distRepA = result.distRep;
+              if (distRepA < distRep) break;
+              conIdx++;
+            }
+            if (conIdx === this.vertOrder[testVert]) {
+              return false;
+            }
+          }
+          conPosIdxA = this.edgeInfo[testVert][this.vertOrder[testVert] + conIdx];
+        }
+
+        // If the last point is on the plane, enter complicated setup
+        if (inOutOnA === 0) {
+          testVert = conVertA;
+          complicatedSetup = true;
+        }
+      } else if (inOutOn === -1) {
+        // Test point is outside of the cutting plane
+      } else {
+        // Test point is on the cutting plane. Switch to the complicated setup.
+        complicatedSetup = true;
+      }
+    } catch (e) {
+      console.error('An error occured: ', e);
+    }
+
+    console.log('Attributes after first iteration: ');
+    console.log(`\ttestVert: ${testVert}`);
+    console.log(`\tconVertA: ${conVertA}`);
+    console.log(`\tconVertB: ${conVertB}`);
+    console.log(`\tconIdx: ${conIdx}`);
+    console.log(`\tconPosIdxA: ${conPosIdxA}`);
+    console.log(`\tconPosIdxB: ${conPosIdxB}`);
+    console.log(`\tinOutOn, inOutOnA, inOutOnB: ${inOutOn} ${inOutOnA} ${inOutOnB}`);
+    console.log(
+      `\tdistRep, distRepA, distRepB: ${distRep.toFixed(5)} ${distRepA?.toFixed(
+        5
+      )} ${distRepB?.toFixed(5)}`
+    );
+
+    if (complicatedSetup) {
+      // TODO
+    } else {
+      // TODO
+    }
 
     return true;
   }
@@ -145,26 +245,33 @@ export class VCell {
    * Test whether a given vertex is inside, outside or on the test plane.
    * @param planeParams Parameters of the test plane.
    * @param testIndex The index of the vertex to test.
-   * @returns The result of the scalar product used in evaluating the location of the point as
-   * well as whether it is inside (-1), outside (+1) or on (0) the plane.
+   * @returns The result of the scalar product (a distance representation of the point to the
+   * plane) used in evaluating the location of the point as well as whether it is inside (-1),
+   * outside (+1) or on (0) the plane.
    */
   #testPoint(
     planeParams: { x: number; y: number; z: number; rs: number },
     testIndex: number
-  ): { scalarProduct: number; inOutOn: number } {
-    const scalarProduct =
+  ): { distRep: number; inOutOn: number } {
+    const distRep =
       this.verts[testIndex][0] * planeParams.x +
       this.verts[testIndex][1] * planeParams.y +
       this.verts[testIndex][2] * planeParams.z -
       planeParams.rs;
 
+    console.log(
+      `point inside? ${testIndex}: ${this.verts[testIndex][0].toFixed(5)} ${this.verts[
+        testIndex
+      ][1].toFixed(5)} ${this.verts[testIndex][2].toFixed(5)}     \t==> ${distRep.toFixed(5)}`
+    );
+
     let inOutOn = 0;
-    if (scalarProduct < -tolerance) {
+    if (distRep < -tolerance) {
       inOutOn = -1;
-    } else if (scalarProduct > tolerance) {
+    } else if (distRep > tolerance) {
       inOutOn = 1;
     }
 
-    return { scalarProduct, inOutOn };
+    return { distRep, inOutOn };
   }
 }
