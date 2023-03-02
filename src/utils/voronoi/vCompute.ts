@@ -54,7 +54,7 @@ export class VCompute {
     // Test all particles in the particle's local region (same block) first
     // --------------------------
 
-    console.log('\nTesting nearby particles:\n');
+    console.log('\nTesting nearby particles:');
     // Variables for the position of other particles in the cell coordinate system
     let x1: number, y1: number, z1: number;
     // Squared distance to other particle (radius squared)

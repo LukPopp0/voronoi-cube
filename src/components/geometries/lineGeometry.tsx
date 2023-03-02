@@ -1,4 +1,3 @@
-import { VCell } from '../../utils/voronoi';
 import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2';
 import { Line2 } from 'three/examples/jsm/lines/Line2';
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial';
