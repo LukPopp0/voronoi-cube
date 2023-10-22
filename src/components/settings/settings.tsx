@@ -4,6 +4,8 @@ import './settings.scss';
 export const Settings = () => {
   const pointDistribution = useVoronoiStore(state => state.pointDistribution);
   const setPointDistribution = useVoronoiStore(state => state.setPointDistribution);
+  const explosionAmount = useVoronoiStore(state => state.explosionAmount);
+  const setExplosionAmount = useVoronoiStore(state => state.setExplosionAmount);
   return (
     <div className="settings-container">
       <div className="preference">
@@ -45,6 +47,21 @@ export const Settings = () => {
             step={0.1}
             value={pointDistribution.restriction}
             onChange={e => setPointDistribution({ restriction: Number.parseFloat(e.target.value) })}
+          />
+        </div>
+      </div>
+      <div className="preference">
+        <label htmlFor="restriction">Explosion Amount</label>
+        <div>
+          <input name="explosionAmount" disabled value={explosionAmount} />
+          <input
+            name="explosionAmount"
+            type="range"
+            min={1}
+            max={2}
+            step={0.05}
+            value={explosionAmount}
+            onChange={e => setExplosionAmount(Number.parseFloat(e.target.value))}
           />
         </div>
       </div>
