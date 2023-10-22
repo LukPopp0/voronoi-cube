@@ -2,12 +2,14 @@ import { useMemo } from 'react';
 import { VoroCell } from 'voro3d';
 import { DoubleSide, Vector3 } from 'three';
 import { BufferGeomMesh } from '../geometries/bufferGeomMesh';
+import { useVoronoiStore } from '../../store/store';
 
 type CellProps = {
   cell: VoroCell;
 };
 
 export const Cell = ({ cell }: CellProps) => {
+  const explosionAmount = useVoronoiStore(state => state.explosionAmount);
   const [normals, indices] = useMemo(() => {
     // Compute face normals for flat shading
     const faceNormals = cell.faces.map(f => {
@@ -45,7 +47,7 @@ export const Cell = ({ cell }: CellProps) => {
 
   return (
     <BufferGeomMesh
-      position={[1.25 * cell.x, 1.25 * cell.y, 1.25 * cell.z]}
+      position={[explosionAmount * cell.x, explosionAmount * cell.y, explosionAmount * cell.z]}
       vertices={cell.vertices}
       indices={indices}
       normals={normals}

@@ -64,20 +64,6 @@ export const RandomPoints = ({
     const cellElements = cells.map((c, i) => <Cell key={i} cell={c} />);
     console.log({ cellElements });
 
-    // const c = {
-    //   particleID: 0,
-    //   x: 0,
-    //   y: 0,
-    //   z: 0,
-    //   nFaces: 2,
-    //   vertices: [0.0, 0.0, 0.0, 5.0, 0.0, 0.0, 0.0, 0.0, 5.0, 0.0, 5.0, 0.0],
-    //   faces: [
-    //     [0, 1, 2],
-    //     [0, 1, 3],
-    //   ],
-    // };
-    // return [<Cell key={0} cell={c} />];
-
     return cellElements;
   }, [pointsCubeRestricted, container]);
 

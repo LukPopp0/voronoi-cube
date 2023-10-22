@@ -10,6 +10,8 @@ interface IPointDistribution {
 interface IVoronoiSettings {
   pointDistribution: IPointDistribution;
   setPointDistribution: (data: Partial<IPointDistribution>) => void;
+  explosionAmount: number;
+  setExplosionAmount: (newAmount: number) => void;
   displayStyle: 'wireframe' | 'solid';
   setDisplayStyle: (displayStyle: 'wireframe' | 'solid') => void;
 }
@@ -29,6 +31,8 @@ export const useVoronoiStore = create<IVoronoiSettings>(set => ({
         ...data,
       },
     })),
+  explosionAmount: 1.2,
+  setExplosionAmount: (explosionAmount: number) => set({ explosionAmount }),
   displayStyle: 'solid',
   setDisplayStyle: (displayStyle: 'wireframe' | 'solid') => set({ displayStyle }),
 }));
