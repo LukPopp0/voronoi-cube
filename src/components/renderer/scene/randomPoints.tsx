@@ -1,9 +1,9 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   cubeDistributionRestricted,
   sphereDistributionRestricted,
 } from '../../../utils/randomDistributions';
-import { VContainer } from '../../../utils/voronoi';
+import { Voro3D } from 'voro3d';
 import { BufferGeomPoints } from '../../geometries/bufferGeomPoints';
 import { Cell } from '../../voronoi/Cell';
 
@@ -16,7 +16,7 @@ type RandomPointsProps = {
 
 export const RandomPoints = ({
   nPoints = 12,
-  size = 10,
+  size = 5,
   seed = 1,
   restriction: minDistance = 0,
 }: RandomPointsProps) => {
@@ -37,50 +37,35 @@ export const RandomPoints = ({
     [pointsCubeRestricted]
   );
 
-  const voronoiCells = useMemo(() => {
-    console.log('\nCREATING VORONOI\n');
-    console.log({ pointsCubeRestricted });
-    // Create points
-    const halfSize = size / 2;
-    const numBlocks = 1;
-    const container = new VContainer(
-      -halfSize,
-      -halfSize,
-      -halfSize,
-      halfSize,
-      halfSize,
-      halfSize,
-      numBlocks,
-      numBlocks,
-      numBlocks
-    );
-    console.log({ container });
+  const [container, setContainer] = useState<Voro3D>();
 
-    console.log('\n\nAdding particles.\n\n');
+  useEffect(() => {
+    (async () => {
+      const res = await Voro3D.create(
+        -size / 2,
+        size / 2,
+        -size / 2,
+        size / 2,
+        -size / 2,
+        size / 2,
+        2,
+        2,
+        2
+      );
+      setContainer(res);
+    })();
+  }, [size]);
 
-    container.setParticles(pointsCubeRestricted);
+  const voronoiCells: JSX.Element[] = useMemo(() => {
+    if (!container) return [];
+    console.log('\nCREATING VORONOI\n', pointsCubeRestricted);
+    const cells = container.computeCells(pointsCubeRestricted);
+    console.log({ container, cells });
+    const cellElements = cells.map((c, i) => <Cell key={i} cell={c} />);
+    console.log({ cellElements });
 
-    console.log('\n\nChecking partsInBlocks.\n\n');
-
-    for (let i = 0; i < container.nx; ++i) {
-      for (let j = 0; j < container.ny; ++j) {
-        for (let k = 0; k < container.nz; ++k) {
-          const ijk = k * container.nx * container.ny + j * container.nx + i;
-          const nParts = container.partsInBlocks[ijk];
-
-          console.log(`Block ${ijk}: ${nParts} particle(s)`);
-
-          container.partIDsInBlocks[ijk].forEach((v, i) => console.log(`      ${i}: ${v}`));
-        }
-      }
-    }
-
-    console.log(container.partsInBlocks);
-    const cells = container.getCells();
-    console.log('Got Cells: ', cells);
-
-    return cells.map((c, i) => <Cell key={i} cell={c} />);
-  }, [pointsCubeRestricted, size]);
+    return cellElements;
+  }, [pointsCubeRestricted, container]);
 
   return (
     <>
