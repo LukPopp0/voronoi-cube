@@ -10,6 +10,8 @@ interface IPointDistribution {
 interface IVoronoiSettings {
   pointDistribution: IPointDistribution;
   setPointDistribution: (data: Partial<IPointDistribution>) => void;
+  displayStyle: 'wireframe' | 'solid';
+  setDisplayStyle: (displayStyle: 'wireframe' | 'solid') => void;
 }
 
 export const useVoronoiStore = create<IVoronoiSettings>(set => ({
@@ -27,6 +29,8 @@ export const useVoronoiStore = create<IVoronoiSettings>(set => ({
         ...data,
       },
     })),
+  displayStyle: 'solid',
+  setDisplayStyle: (displayStyle: 'wireframe' | 'solid') => set({ displayStyle }),
 }));
 
 // Connect zustand store with Redux Devtools Browser extension
