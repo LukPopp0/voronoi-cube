@@ -1,8 +1,22 @@
 .settings-container {
   .preference {
-    display: flex;
-    justify-content: space-between;
-    width: 60%;
+    display: grid;
+    grid-template-columns: 50% 50%;
+    width: 100%;
     margin: 0.5rem auto 0.5rem auto;
+
+    :nth-child(1) {
+      justify-self: flex-end;
+      margin-right: 0.5rem;
+    }
+
+    :nth-child(2) {
+      justify-self: flex-start;
+      margin-left: 0.5rem;
+    }
+
+    div {
+      display: flex;
+    }
   }
 }

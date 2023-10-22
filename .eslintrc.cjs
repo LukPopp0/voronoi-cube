@@ -8,6 +8,7 @@ module.exports = {
     'eslint:recommended',
     'plugin:react/recommended',
     'plugin:import/recommended',
+    'plugin:import/typescript',
     'plugin:jsx-a11y/recommended',
     'plugin:@typescript-eslint/recommended',
     'plugin:react-hooks/recommended',
@@ -28,7 +29,7 @@ module.exports = {
     },
     'import/resolver': {
       node: {
-        paths: ['src'],
+        // paths: ['src'],
         extensions: ['.js', '.jsx', '.ts', '.tsx'],
       },
     },
@@ -42,11 +43,14 @@ module.exports = {
       'single',
       { avoidEscape: true, allowTemplateLiterals: false },
     ],
+    'import/newline-after-import': ['warn', { count: 1 }],
+    'jsx-a11y/no-static-element-interactions': 'off',
     'react/no-unknown-property': 'off',
     'react/react-in-jsx-scope': 'off',
     curly: ['warn', 'multi-line'],
     eqeqeq: 'error',
     'prefer-arrow-callback': 'error',
+    'prefer-const': 'warn',
     'prettier/prettier': ['error', { printWidth: 100 }],
   },
 };
