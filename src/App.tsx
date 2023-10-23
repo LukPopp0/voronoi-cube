@@ -6,9 +6,9 @@ import { Settings } from './components/settings/settings';
 const App = () => {
   return (
     <div className="App">
+      <Renderer />
       <Header />
       <Settings />
-      <Renderer />
     </div>
   );
 };

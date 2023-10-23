@@ -38,7 +38,6 @@ export const Settings = () => {
       <div className="preference">
         <label htmlFor="restriction">Restriction</label>
         <div>
-          <input name="restriction" disabled value={pointDistribution.restriction} />
           <input
             name="restriction"
             type="range"
@@ -53,7 +52,6 @@ export const Settings = () => {
       <div className="preference">
         <label htmlFor="restriction">Explosion Amount</label>
         <div>
-          <input name="explosionAmount" disabled value={explosionAmount} />
           <input
             name="explosionAmount"
             type="range"
