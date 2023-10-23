@@ -1,6 +1,13 @@
 header {
+  width: 100%;
+  position: absolute;
+  top: 5rem;
+  left: 50%;
+  transform: translateX(-50%);
+
   h1 {
     font-size: 3rem;
+    line-height: 3rem;
     font-weight: normal;
   }
 }

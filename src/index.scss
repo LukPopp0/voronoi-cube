@@ -5,9 +5,8 @@
   font-weight: 400;
 
   color-scheme: light dark;
-  color: #e6e6e6;
   background-color: #242424;
-
+  color: #213547;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -25,7 +24,7 @@ body {
 
 @media (prefers-color-scheme: light) {
   :root {
-    color: #213547;
+    color: #e6e6e6;
     background-color: #ffffff;
   }
 }
