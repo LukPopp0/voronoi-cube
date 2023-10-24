@@ -27,15 +27,6 @@ export const Settings = () => {
         />
       </div>
       <div className="preference">
-        <label htmlFor="size">Size</label>
-        <input
-          name="size"
-          type="number"
-          value={pointDistribution.size}
-          onChange={e => setPointDistribution({ size: Number.parseInt(e.target.value) })}
-        />
-      </div>
-      <div className="preference">
         <label htmlFor="restriction">Restriction</label>
         <div>
           <input
