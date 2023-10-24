@@ -25,7 +25,7 @@ export const Cell = ({ cell }: CellProps) => {
     const indices = cell.faces.map(face => {
       const tris = [];
       for (let fvi = 1; fvi < face.length - 1; ++fvi) {
-        tris.push(face[0], face[fvi], face[fvi + 1]);
+        tris.push(face[0], face[fvi + 1], face[fvi]);
       }
       return tris;
     });
@@ -47,7 +47,7 @@ export const Cell = ({ cell }: CellProps) => {
       indices={indices}
       normals={normals}
     >
-      <meshPhongMaterial side={DoubleSide} color="#555555" flatShading={true} />
+      <meshPhongMaterial color="#555555" flatShading={true} />
     </BufferGeomMesh>
   );
 };
