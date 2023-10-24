@@ -1,27 +1,33 @@
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useThree } from '@react-three/fiber';
 import { initialCameraPosition } from '../../constants';
 import { MyScene } from './scene/myScene';
 import './renderer.scss';
-import { useState } from 'react';
+import { useVoronoiStore } from '../../store/store';
+import { useEffect } from 'react';
+import { Scene } from 'three';
 
-const baseSpeed = 0.25;
+const ThreeSetter = ({ passScene }: { passScene: (scene: Scene) => void }) => {
+  const { scene } = useThree();
+  useEffect(() => {
+    console.log('setting three');
+    passScene(scene);
+  }, [scene, passScene]);
+  return <></>;
+};
 
-export const Renderer = () => {
-  const [rotationSpeed, setRotationSpeed] = useState<number>(baseSpeed);
+export const Renderer = ({ passScene }: { passScene: (scene: Scene) => void }) => {
+  const darkMode = useVoronoiStore(state => state.darkMode);
 
   return (
     <div className="renderer-container">
       <Canvas
-        onPointerDown={() => {
-          setRotationSpeed(0);
-          document.addEventListener('pointerup', () => setRotationSpeed(baseSpeed), { once: true });
-        }}
         camera={{
           position: initialCameraPosition.clone(),
         }}
       >
-        <color attach="background" args={['#e6e6e6']} />
-        <MyScene rotationSpeed={rotationSpeed} />
+        <color attach="background" args={[darkMode ? '#111111' : '#e6e6e6']} />
+        <ThreeSetter passScene={passScene} />
+        <MyScene />
       </Canvas>
     </div>
   );

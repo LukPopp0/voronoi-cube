@@ -1,4 +1,5 @@
 import { useVoronoiStore } from '../../store/store';
+import { DownloadButton } from './downloadButton';
 import './settings.scss';
 
 export const Settings = () => {
@@ -24,15 +25,6 @@ export const Settings = () => {
           type="number"
           value={pointDistribution.seed}
           onChange={e => setPointDistribution({ seed: Number.parseInt(e.target.value) })}
-        />
-      </div>
-      <div className="preference">
-        <label htmlFor="size">Size</label>
-        <input
-          name="size"
-          type="number"
-          value={pointDistribution.size}
-          onChange={e => setPointDistribution({ size: Number.parseInt(e.target.value) })}
         />
       </div>
       <div className="preference">
@@ -62,6 +54,9 @@ export const Settings = () => {
             onChange={e => setExplosionAmount(Number.parseFloat(e.target.value))}
           />
         </div>
+      </div>
+      <div>
+        <DownloadButton />
       </div>
     </div>
   );
