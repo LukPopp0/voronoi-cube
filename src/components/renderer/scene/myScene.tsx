@@ -5,18 +5,14 @@ import { VoronoiCube } from './voronoiCube';
 import { ModelGroup } from './modelGroup';
 import { InnerCube } from './innerCube';
 
-type MySceneProps = {
-  rotationSpeed?: number;
-};
-
-export const MyScene = ({ rotationSpeed = 0 }: MySceneProps) => {
+export const MyScene = () => {
   const { nPoints, size, seed, restriction } = useVoronoiStore(state => state.pointDistribution);
 
   return (
     <>
       <Lighting />
       <Controls />
-      <ModelGroup rotationSpeed={rotationSpeed}>
+      <ModelGroup>
         <VoronoiCube nPoints={nPoints} size={size} seed={seed} restriction={restriction} />
         <InnerCube />
       </ModelGroup>
