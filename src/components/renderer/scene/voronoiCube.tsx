@@ -51,5 +51,5 @@ export const VoronoiCube = ({
     return cellElements;
   }, [pointsCubeRestricted, container]);
 
-  return voronoiCells;
+  return <group name="voronoiCube">{voronoiCells}</group>;
 };

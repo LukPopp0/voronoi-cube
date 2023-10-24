@@ -1,4 +1,5 @@
 import { useVoronoiStore } from '../../store/store';
+import { DownloadButton } from './downloadButton';
 import './settings.scss';
 
 export const Settings = () => {
@@ -53,6 +54,9 @@ export const Settings = () => {
             onChange={e => setExplosionAmount(Number.parseFloat(e.target.value))}
           />
         </div>
+      </div>
+      <div>
+        <DownloadButton />
       </div>
     </div>
   );
