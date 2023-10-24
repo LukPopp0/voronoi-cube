@@ -40,11 +40,6 @@ export const Cell = ({ cell }: CellProps) => {
     return [indexNormals.flat(), indices.flat()];
   }, [cell.faces, cell.vertices]);
 
-  // TODO: Display style
-  // TODO: Check number of points for overflow
-  // TODO: Limit amount of points to avoid overflow
-  // TODO: Find memory leak in wasm
-
   return (
     <BufferGeomMesh
       position={[explosionAmount * cell.x, explosionAmount * cell.y, explosionAmount * cell.z]}

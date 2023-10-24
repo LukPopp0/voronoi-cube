@@ -8,6 +8,8 @@ interface IPointDistribution {
 }
 
 interface IVoronoiSettings {
+  darkMode: boolean;
+  setDarkMode: (darkMode: boolean) => void;
   pointDistribution: IPointDistribution;
   setPointDistribution: (data: Partial<IPointDistribution>) => void;
   explosionAmount: number;
@@ -17,6 +19,8 @@ interface IVoronoiSettings {
 }
 
 export const useVoronoiStore = create<IVoronoiSettings>(set => ({
+  darkMode: true,
+  setDarkMode: (darkMode: boolean) => set({ darkMode }),
   pointDistribution: {
     nPoints: 12,
     size: 10,
