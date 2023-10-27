@@ -1,13 +1,29 @@
 header {
-  width: 100%;
+  display: flex;
+  justify-content: center;
   position: absolute;
+  width: 100%;
   top: 5rem;
   left: 50%;
   transform: translateX(-50%);
+  pointer-events: none;
 
   h1 {
     font-size: 3rem;
     line-height: 3rem;
     font-weight: normal;
+    width: fit-content;
+  }
+}
+
+@media only screen and (max-height: 640px) and (orientation: landscape) {
+  header {
+    display: block;
+    top: 50%;
+    bottom: unset;
+    left: 2rem;
+    right: unset;
+    transform: translateY(-50%);
+    text-align: left;
   }
 }

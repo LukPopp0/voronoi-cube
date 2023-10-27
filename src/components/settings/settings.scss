@@ -13,6 +13,7 @@
     :nth-child(1) {
       justify-self: flex-end;
       margin-right: 0.5rem;
+      width: max-content;
     }
 
     :nth-child(2) {
@@ -23,5 +24,15 @@
     div {
       display: flex;
     }
+  }
+}
+
+@media only screen and (max-height: 640px) and (orientation: landscape) {
+  .settings-container {
+    top: 50%;
+    bottom: unset;
+    left: unset;
+    right: 2rem;
+    transform: translateY(-50%);
   }
 }
