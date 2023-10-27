@@ -18,10 +18,10 @@ export const VoronoiCube = ({
 }: VoronoiCubeProps) => {
   const [container, setContainer] = useState<Voro3D>();
 
-  const pointsCubeRestricted = useMemo(
-    () => cubeDistributionRestricted(nPoints, size - 0.0001, seed, minDistance),
-    [minDistance, nPoints, seed, size]
-  );
+  const pointsCubeRestricted = useMemo(() => {
+    if (nPoints < 2) return [[0, 0, 0]];
+    return cubeDistributionRestricted(nPoints, size - 0.0001, seed, minDistance);
+  }, [minDistance, nPoints, seed, size]);
 
   useEffect(() => {
     (async () => {
