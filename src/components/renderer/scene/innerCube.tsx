@@ -22,7 +22,7 @@ export const InnerCube = ({ size = 10 }: InnerCubeProps) => {
 
   return (
     <>
-      <mesh>
+      <mesh name="innerCube">
         <boxGeometry args={[size * 0.75, size * 0.75, size * 0.75]} />
         <meshStandardMaterial
           ref={mat}
