@@ -1,7 +1,7 @@
 import { useCallback, useContext } from 'react';
 import { SceneContext } from '../../hooks/sceneContext';
 import { Scene } from 'three';
-import { OBJExporter } from 'three/examples/jsm/exporters/OBJExporter';
+import { STLExporter } from 'three/examples/jsm/exporters/STLExporter';
 
 const download = (filename: string, text: string) => {
   const element = document.createElement('a');
@@ -21,8 +21,8 @@ export const DownloadButton = () => {
   const downloadVoronoi = useCallback(() => {
     const voronoiCube = (scene as Scene).getObjectByName('voronoiCube');
     if (!voronoiCube) return;
-    const data = new OBJExporter().parse(voronoiCube);
-    download('voronoi.obj', data);
+    const data = new STLExporter().parse(voronoiCube);
+    download('voronoi.stl', data);
   }, [scene]);
   return <button onClick={() => downloadVoronoi()}>Download</button>;
 };
