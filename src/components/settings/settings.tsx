@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useVoronoiStore } from '../../store/store';
 import { DownloadButton } from './downloadButton';
 import './settings.scss';
@@ -7,6 +8,14 @@ export const Settings = () => {
   const setPointDistribution = useVoronoiStore(state => state.setPointDistribution);
   const explosionAmount = useVoronoiStore(state => state.explosionAmount);
   const setExplosionAmount = useVoronoiStore(state => state.setExplosionAmount);
+
+  const [nPointsLoc, setNPointsLoc] = useState<number>(pointDistribution.nPoints);
+
+  useEffect(() => {
+    if (nPointsLoc < 0 || isNaN(nPointsLoc)) return;
+    setPointDistribution({ nPoints: nPointsLoc });
+  }, [nPointsLoc, setPointDistribution]);
+
   return (
     <div className="settings-container">
       <div className="preference">
@@ -14,8 +23,12 @@ export const Settings = () => {
         <input
           name="nPoints"
           type="number"
-          value={pointDistribution.nPoints}
-          onChange={e => setPointDistribution({ nPoints: Number.parseInt(e.target.value) })}
+          min={2}
+          max={1000}
+          value={nPointsLoc}
+          onChange={e => {
+            setNPointsLoc(Number.parseInt(e.target.value));
+          }}
         />
       </div>
       <div className="preference">

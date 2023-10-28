@@ -11,6 +11,11 @@
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
 
+  // This is just a hack. On some phones in landscape mode,
+  // the renderer does not cover the whole screen. This is
+  // to avoid the white edges.
+  background-color: #111111;
+
   .App {
     &.dark-theme {
       color: #e6e6e6;
@@ -29,5 +34,5 @@ body {
   display: flex;
   place-items: center;
   min-width: 320px;
-  min-height: 100vh;
+  min-height: 100dvh;
 }
