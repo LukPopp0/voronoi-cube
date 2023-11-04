@@ -10,6 +10,10 @@
     width: 100%;
     margin: 0.5rem auto 0.5rem auto;
 
+    label {
+      user-select: none;
+    }
+
     :nth-child(1) {
       justify-self: flex-end;
       margin-right: 0.5rem;
