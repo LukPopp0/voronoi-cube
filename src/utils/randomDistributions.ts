@@ -196,3 +196,34 @@ const getDistance = (p1: [number, number, number], p2: [number, number, number])
   const dz = p1[2] - p2[2];
   return Math.sqrt(dx * dx + dy * dy + dz * dz);
 };
+
+export const fibonacciDistribution = (
+  n: number,
+  radius: number,
+  seed?: number
+): [number, number, number][] => {
+  const random = new MersenneTwister(seed);
+  const randomRotation = random.random();
+  const goldenRatio = (1 + Math.pow(5, 0.5)) / 2;
+  const arr: [number, number, number][] = new Array(n).fill(0).map((_, idx) => {
+    const i = idx + 0.5;
+    const phi = Math.acos(1 - (2 * i) / n);
+    const theta = (2 * Math.PI * i) / goldenRatio + randomRotation * Math.PI * 2;
+    return [
+      radius * Math.cos(theta) * Math.sin(phi),
+      radius * Math.cos(phi),
+      radius * Math.sin(theta) * Math.sin(phi),
+    ];
+  });
+  return arr;
+};
+
+export const fibonacciDistributionCube = (
+  n: number,
+  radius: number,
+  seed?: number
+): [number, number, number][] => {
+  return fibonacciDistribution(n, radius, seed).map(([x, y, z]) =>
+    sphereToCubeProjection(x, y, z, radius / 2)
+  );
+};

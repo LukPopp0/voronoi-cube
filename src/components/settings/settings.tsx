@@ -19,6 +19,21 @@ export const Settings = () => {
   return (
     <div className="settings-container">
       <div className="preference">
+        <label htmlFor="distributionFunction">Distribution Function</label>
+        <select
+          name="distributionFunction"
+          value={pointDistribution.distributionFunction}
+          onChange={e =>
+            setPointDistribution({
+              distributionFunction: e.target.value === 'fibonacci' ? 'fibonacci' : 'simple',
+            })
+          }
+        >
+          <option value="fibonacci">Fibonacci</option>
+          <option value="simple">Simple</option>
+        </select>
+      </div>
+      <div className="preference">
         <label htmlFor="nPoints">Number of points</label>
         <input
           name="nPoints"
@@ -40,20 +55,24 @@ export const Settings = () => {
           onChange={e => setPointDistribution({ seed: Number.parseInt(e.target.value) })}
         />
       </div>
-      <div className="preference">
-        <label htmlFor="restriction">Restriction</label>
-        <div>
-          <input
-            name="restriction"
-            type="range"
-            min={0}
-            max={1}
-            step={0.1}
-            value={pointDistribution.restriction}
-            onChange={e => setPointDistribution({ restriction: Number.parseFloat(e.target.value) })}
-          />
+      {pointDistribution.distributionFunction !== 'fibonacci' && (
+        <div className="preference">
+          <label htmlFor="restriction">Restriction</label>
+          <div>
+            <input
+              name="restriction"
+              type="range"
+              min={0}
+              max={1}
+              step={0.1}
+              value={pointDistribution.restriction}
+              onChange={e =>
+                setPointDistribution({ restriction: Number.parseFloat(e.target.value) })
+              }
+            />
+          </div>
         </div>
-      </div>
+      )}{' '}
       <div className="preference">
         <label htmlFor="restriction">Explosion Amount</label>
         <div>
