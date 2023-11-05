@@ -6,8 +6,9 @@ import { ModelGroup } from './modelGroup';
 import { InnerCube } from './innerCube';
 import { useMemo } from 'react';
 import {
-  cubeDistributionRestricted,
-  fibonacciDistributionCube,
+  cubeDistribution,
+  fibonacciDistribution,
+  sphereDistributionRestricted,
 } from '../../../utils/randomDistributions';
 
 export const MyScene = () => {
@@ -17,11 +18,12 @@ export const MyScene = () => {
 
   const pointDistribution = useMemo(() => {
     if (nPoints < 2) return [[0, 0, 0]];
+    const s = size - 0.0001;
     switch (distributionFunction) {
       case 'fibonacci':
-        return fibonacciDistributionCube(nPoints, size - 0.0001, seed);
+        return cubeDistribution(nPoints, s, seed, fibonacciDistribution);
       case 'simple':
-        return cubeDistributionRestricted(nPoints, size - 0.0001, seed, restriction);
+        return cubeDistribution(nPoints, s, seed, sphereDistributionRestricted, [restriction]);
     }
   }, [nPoints, distributionFunction, size, seed, restriction]);
 

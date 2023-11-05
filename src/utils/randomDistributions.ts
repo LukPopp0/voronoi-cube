@@ -112,8 +112,13 @@ export const sphereDistributionRestricted = (
  * distribution functions. It takes a distribution function as well as additional parameters
  * that would be passed to this distribution function. By default this is a regular sphere
  * sphere distribution.
+ * @param n Number of points.
+ * @param s Cube side length.
+ * @param seed Random seed.
+ * @param args Arguments to pass on to the distribution function (e.g. min. distance).
+ * @returns Array of array of 3 points.
  */
-const _cubeDistribution = (
+export const cubeDistribution = (
   n: number,
   s: number,
   seed?: number,
@@ -125,47 +130,9 @@ const _cubeDistribution = (
   ) => [number, number, number][] = sphereDistribution,
   args: any[] = []
 ): [number, number, number][] => {
-  const points = distributionFunction(n, s / 2, seed, ...args);
-  const projectedPoints: [number, number, number][] = [];
-
-  for (const point of points) {
-    const [x, y, z] = point;
-    projectedPoints.push(sphereToCubeProjection(x, y, z, s / 2));
-  }
-
-  return projectedPoints;
-};
-
-/**
- * Distributes points on the surface of a cube.
- * @param n Number of points.
- * @param s Cube side length.
- * @param seed Random seed.
- * @returns Array of array of 3 points.
- */
-export const cubeDistribution = (
-  n: number,
-  s: number,
-  seed?: number
-): [number, number, number][] => {
-  return _cubeDistribution(n, s, seed, sphereDistribution);
-};
-
-/**
- * Distributes points on the surface of a cube.
- * @param n Number of points.
- * @param s Cube side length.
- * @param seed Random seed.
- * @param minDistance Minimum distance between the points.
- * @returns Array of array of 3 points.
- */
-export const cubeDistributionRestricted = (
-  n: number,
-  s: number,
-  seed?: number,
-  minDistance = 0
-): [number, number, number][] => {
-  return _cubeDistribution(n, s, seed, sphereDistributionRestricted, [minDistance]);
+  return distributionFunction(n, s / 2, seed, ...args).map(([x, y, z]) =>
+    sphereToCubeProjection(x, y, z, s / 2)
+  );
 };
 
 /**
