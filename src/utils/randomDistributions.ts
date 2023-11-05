@@ -112,8 +112,13 @@ export const sphereDistributionRestricted = (
  * distribution functions. It takes a distribution function as well as additional parameters
  * that would be passed to this distribution function. By default this is a regular sphere
  * sphere distribution.
+ * @param n Number of points.
+ * @param s Cube side length.
+ * @param seed Random seed.
+ * @param args Arguments to pass on to the distribution function (e.g. min. distance).
+ * @returns Array of array of 3 points.
  */
-const _cubeDistribution = (
+export const cubeDistribution = (
   n: number,
   s: number,
   seed?: number,
@@ -125,47 +130,9 @@ const _cubeDistribution = (
   ) => [number, number, number][] = sphereDistribution,
   args: any[] = []
 ): [number, number, number][] => {
-  const points = distributionFunction(n, s / 2, seed, ...args);
-  const projectedPoints: [number, number, number][] = [];
-
-  for (const point of points) {
-    const [x, y, z] = point;
-    projectedPoints.push(sphereToCubeProjection(x, y, z, s / 2));
-  }
-
-  return projectedPoints;
-};
-
-/**
- * Distributes points on the surface of a cube.
- * @param n Number of points.
- * @param s Cube side length.
- * @param seed Random seed.
- * @returns Array of array of 3 points.
- */
-export const cubeDistribution = (
-  n: number,
-  s: number,
-  seed?: number
-): [number, number, number][] => {
-  return _cubeDistribution(n, s, seed, sphereDistribution);
-};
-
-/**
- * Distributes points on the surface of a cube.
- * @param n Number of points.
- * @param s Cube side length.
- * @param seed Random seed.
- * @param minDistance Minimum distance between the points.
- * @returns Array of array of 3 points.
- */
-export const cubeDistributionRestricted = (
-  n: number,
-  s: number,
-  seed?: number,
-  minDistance = 0
-): [number, number, number][] => {
-  return _cubeDistribution(n, s, seed, sphereDistributionRestricted, [minDistance]);
+  return distributionFunction(n, s / 2, seed, ...args).map(([x, y, z]) =>
+    sphereToCubeProjection(x, y, z, s / 2)
+  );
 };
 
 /**
@@ -195,4 +162,35 @@ const getDistance = (p1: [number, number, number], p2: [number, number, number])
   const dy = p1[1] - p2[1];
   const dz = p1[2] - p2[2];
   return Math.sqrt(dx * dx + dy * dy + dz * dz);
+};
+
+export const fibonacciDistribution = (
+  n: number,
+  radius: number,
+  seed?: number
+): [number, number, number][] => {
+  const random = new MersenneTwister(seed);
+  const randomRotation = random.random();
+  const goldenRatio = (1 + Math.pow(5, 0.5)) / 2;
+  const arr: [number, number, number][] = new Array(n).fill(0).map((_, idx) => {
+    const i = idx + 0.5;
+    const phi = Math.acos(1 - (2 * i) / n);
+    const theta = (2 * Math.PI * i) / goldenRatio + randomRotation * Math.PI * 2;
+    return [
+      radius * Math.cos(theta) * Math.sin(phi),
+      radius * Math.cos(phi),
+      radius * Math.sin(theta) * Math.sin(phi),
+    ];
+  });
+  return arr;
+};
+
+export const fibonacciDistributionCube = (
+  n: number,
+  radius: number,
+  seed?: number
+): [number, number, number][] => {
+  return fibonacciDistribution(n, radius, seed).map(([x, y, z]) =>
+    sphereToCubeProjection(x, y, z, radius / 2)
+  );
 };

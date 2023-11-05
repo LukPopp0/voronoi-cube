@@ -1,6 +1,7 @@
 import create from 'zustand';
 
 interface IPointDistribution {
+  distributionFunction: 'simple' | 'fibonacci';
   nPoints: number;
   size: number;
   seed: number;
@@ -22,10 +23,11 @@ export const useVoronoiStore = create<IVoronoiSettings>(set => ({
   darkMode: true,
   setDarkMode: (darkMode: boolean) => set({ darkMode }),
   pointDistribution: {
+    distributionFunction: 'fibonacci',
     nPoints: 12,
     size: 10,
     seed: 0,
-    restriction: 1,
+    restriction: 0.6,
   },
   setPointDistribution: (data: Partial<IPointDistribution>) =>
     set(state => ({
