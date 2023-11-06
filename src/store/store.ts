@@ -24,9 +24,9 @@ export const useVoronoiStore = create<IVoronoiSettings>(set => ({
   setDarkMode: (darkMode: boolean) => set({ darkMode }),
   pointDistribution: {
     distributionFunction: 'fibonacci',
-    nPoints: 12,
+    nPoints: 18,
     size: 10,
-    seed: 0,
+    seed: 1,
     restriction: 0.6,
   },
   setPointDistribution: (data: Partial<IPointDistribution>) =>
@@ -37,7 +37,7 @@ export const useVoronoiStore = create<IVoronoiSettings>(set => ({
         ...data,
       },
     })),
-  explosionAmount: 1.2,
+  explosionAmount: 1.1,
   setExplosionAmount: (explosionAmount: number) => set({ explosionAmount }),
   displayStyle: 'solid',
   setDisplayStyle: (displayStyle: 'wireframe' | 'solid') => set({ displayStyle }),

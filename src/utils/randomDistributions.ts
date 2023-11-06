@@ -170,12 +170,12 @@ export const fibonacciDistribution = (
   seed?: number
 ): [number, number, number][] => {
   const random = new MersenneTwister(seed);
-  const randomRotation = random.random();
+  const randomRotation = random.random() * Math.PI * 2;
   const goldenRatio = (1 + Math.pow(5, 0.5)) / 2;
   const arr: [number, number, number][] = new Array(n).fill(0).map((_, idx) => {
     const i = idx + 0.5;
     const phi = Math.acos(1 - (2 * i) / n);
-    const theta = (2 * Math.PI * i) / goldenRatio + randomRotation * Math.PI * 2;
+    const theta = (2 * Math.PI * i) / goldenRatio + randomRotation;
     return [
       radius * Math.cos(theta) * Math.sin(phi),
       radius * Math.cos(phi),
@@ -185,12 +185,36 @@ export const fibonacciDistribution = (
   return arr;
 };
 
-export const fibonacciDistributionCube = (
+const mapNumRange = (
+  num: number,
+  inMin: number,
+  inMax: number,
+  outMin: number,
+  outMax: number
+): number => ((num - inMin) * (outMax - outMin)) / (inMax - inMin) + outMin;
+
+export const fibonacciDistributionRestricted = (
   n: number,
   radius: number,
   seed?: number
 ): [number, number, number][] => {
-  return fibonacciDistribution(n, radius, seed).map(([x, y, z]) =>
-    sphereToCubeProjection(x, y, z, radius / 2)
-  );
+  const random = new MersenneTwister(seed);
+  const randomRotation = random.random() * Math.PI * 2;
+
+  const _n = n - 1;
+  const phiRestriction = 0.2 * Math.PI;
+  const goldenRatio = (1 + Math.pow(5, 0.5)) / 2;
+  const arr: [number, number, number][] = new Array(_n).fill(0).map((_, idx) => {
+    const i = idx + 0.5;
+    let phi = Math.acos(1 - (2 * i) / _n);
+    phi = mapNumRange(phi, 0, Math.PI, 0, Math.PI - phiRestriction);
+    const theta = (2 * Math.PI * i) / goldenRatio + randomRotation;
+    return [
+      radius * Math.cos(theta) * Math.sin(phi),
+      radius * Math.cos(phi),
+      radius * Math.sin(theta) * Math.sin(phi),
+    ];
+  });
+  arr.unshift([0, -radius, 0]);
+  return arr;
 };
