@@ -30,11 +30,16 @@ export const VoronoiCube = ({ points = [], size = 10 }: VoronoiCubeProps) => {
   const voronoiCells: JSX.Element[] = useMemo(() => {
     if (!container) return [];
     console.log(`\nCREATING VORONOI (${points.length / 3} points)\n`);
-    const cells = container.computeCells(points);
-    const cellElements = cells.map((c, i) => <Cell key={i} cell={c} />);
-    // console.log({ container, cells });
-    // console.log({ cellElements });
+    let cells;
 
+    try {
+      cells = container.computeCells(points);
+    } catch {
+      window.location.reload();
+      return [];
+    }
+
+    const cellElements = cells.map((c, i) => <Cell key={i} cell={c} />);
     return cellElements;
   }, [points, container]);
 
