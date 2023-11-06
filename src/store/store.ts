@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { updateURLParameter } from '../utils/urlEdit';
+import { clamp } from 'three/src/math/MathUtils';
 
 interface IPointDistribution {
   distribution: 'simple' | 'fibonacci' | string;
@@ -23,20 +24,20 @@ interface IVoronoiSettings {
 export const useVoronoiStore = create<IVoronoiSettings>(set => {
   const urlParams = new URL(window.location.href).searchParams;
   const defaults = {
-    distribution: urlParams.get('distributionFunction'),
-    nPoints: urlParams.get('nPoints'),
-    seed: urlParams.get('seed'),
-    restriction: urlParams.get('restriction'),
+    distribution: urlParams.get('distribution') || 'fibonacci',
+    nPoints: urlParams.get('nPoints') || 18,
+    seed: urlParams.get('seed') || 1,
+    restriction: urlParams.get('restriction') || 0.6,
   };
   return {
     darkMode: true,
     setDarkMode: (darkMode: boolean) => set({ darkMode }),
     pointDistribution: {
-      distribution: defaults.distribution ? defaults.distribution : 'fibonacci',
-      nPoints: defaults.nPoints ? Number(defaults.nPoints) : 18,
+      distribution: defaults.distribution,
+      nPoints: clamp(Number(defaults.nPoints), 2, 1000),
       size: 10,
-      seed: defaults.seed ? Number(defaults.seed) : 1,
-      restriction: defaults.restriction ? Number(defaults.restriction) : 0.6,
+      seed: Number(defaults.seed),
+      restriction: clamp(Number(defaults.restriction), 0, 1),
     },
     setPointDistribution: (data: Partial<IPointDistribution>) =>
       set(state => {
