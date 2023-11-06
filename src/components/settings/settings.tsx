@@ -19,13 +19,13 @@ export const Settings = () => {
   return (
     <div className="settings-container">
       <div className="preference">
-        <label htmlFor="distributionFunction">Distribution Function</label>
+        <label htmlFor="distribution">Distribution Function</label>
         <select
-          name="distributionFunction"
-          value={pointDistribution.distributionFunction}
+          name="distribution"
+          value={pointDistribution.distribution}
           onChange={e =>
             setPointDistribution({
-              distributionFunction: e.target.value === 'fibonacci' ? 'fibonacci' : 'simple',
+              distribution: e.target.value === 'fibonacci' ? 'fibonacci' : 'simple',
             })
           }
         >
@@ -55,7 +55,7 @@ export const Settings = () => {
           onChange={e => setPointDistribution({ seed: Number.parseInt(e.target.value) })}
         />
       </div>
-      {pointDistribution.distributionFunction !== 'fibonacci' && (
+      {pointDistribution.distribution !== 'fibonacci' && (
         <div className="preference">
           <label htmlFor="restriction">Restriction</label>
           <div>

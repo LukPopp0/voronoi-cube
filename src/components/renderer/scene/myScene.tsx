@@ -7,25 +7,28 @@ import { InnerCube } from './innerCube';
 import { useMemo } from 'react';
 import {
   cubeDistribution,
-  fibonacciDistribution,
+  fibonacciDistributionRestricted,
   sphereDistributionRestricted,
 } from '../../../utils/randomDistributions';
 
 export const MyScene = () => {
-  const { nPoints, size, seed, restriction, distributionFunction } = useVoronoiStore(
+  const { nPoints, size, seed, restriction, distribution } = useVoronoiStore(
     state => state.pointDistribution
   );
 
   const pointDistribution = useMemo(() => {
     if (nPoints < 2) return [[0, 0, 0]];
     const s = size - 0.0001;
-    switch (distributionFunction) {
+    switch (distribution) {
       case 'fibonacci':
-        return cubeDistribution(nPoints, s, seed, fibonacciDistribution);
+        return cubeDistribution(nPoints, s, seed + nPoints, fibonacciDistributionRestricted);
       case 'simple':
-        return cubeDistribution(nPoints, s, seed, sphereDistributionRestricted, [restriction]);
+        return cubeDistribution(nPoints, s, seed + nPoints, sphereDistributionRestricted, [
+          restriction,
+        ]);
     }
-  }, [nPoints, distributionFunction, size, seed, restriction]);
+    return [];
+  }, [nPoints, distribution, size, seed, restriction]);
 
   return (
     <>
@@ -34,6 +37,9 @@ export const MyScene = () => {
       <ModelGroup>
         <VoronoiCube points={pointDistribution.flat()} />
         <InnerCube />
+        {/* <BufferGeomPoints positions={new Float32Array(pointDistribution.flat())}>
+          <pointsMaterial color={'#00ffff'} />
+        </BufferGeomPoints> */}
       </ModelGroup>
     </>
   );
