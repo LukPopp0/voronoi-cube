@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { VoroCell } from 'voro3d';
-import { DoubleSide, Vector3 } from 'three';
+import { Vector3 } from 'three';
 import { BufferGeomMesh } from '../geometries/bufferGeomMesh';
 import { useVoronoiStore } from '../../store/store';
 
