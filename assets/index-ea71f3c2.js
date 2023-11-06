@@ -92,10 +92,10 @@ class Voro3D {
         // Create and fill point storage
         const pointStorage = new this.voroRaw.VectorFloat();
         if (typeof points[0] === 'number') {
-            points.forEach((p) => pointStorage.push_back(p));
+            points.forEach(p => pointStorage.push_back(p));
         }
         else {
-            points.forEach((p) => {
+            points.forEach(p => {
                 pointStorage.push_back(p[0]);
                 pointStorage.push_back(p[1]);
                 pointStorage.push_back(p[2]);
@@ -126,7 +126,10 @@ class Voro3D {
                 vertices,
                 faces,
             });
+            ce.delete();
         }
+        pointStorage.delete();
+        cellExports.delete();
         return cells.sort((a, b) => (a.particleID < b.particleID ? -1 : 1));
     }
 }
