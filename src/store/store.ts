@@ -19,6 +19,8 @@ interface IVoronoiSettings {
   setExplosionAmount: (newAmount: number) => void;
   displayStyle: 'wireframe' | 'solid';
   setDisplayStyle: (displayStyle: 'wireframe' | 'solid') => void;
+  crackSize: number;
+  setCrackSize: (crackSize: number) => void;
 }
 
 export const useVoronoiStore = create<IVoronoiSettings>(set => {
@@ -57,10 +59,12 @@ export const useVoronoiStore = create<IVoronoiSettings>(set => {
           },
         };
       }),
-    explosionAmount: 1.1,
+    explosionAmount: 1.0,
     setExplosionAmount: (explosionAmount: number) => set({ explosionAmount }),
     displayStyle: 'solid',
     setDisplayStyle: (displayStyle: 'wireframe' | 'solid') => set({ displayStyle }),
+    crackSize: 0.9,
+    setCrackSize: (crackSize: number) => set({ crackSize }),
   };
 });
 

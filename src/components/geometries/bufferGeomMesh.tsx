@@ -15,7 +15,7 @@ export const BufferGeomMesh = ({
   ...meshProps
 }: BufferGeomMeshProps) => {
   const mesh = useRef<Mesh>(null);
-  const MAX_POINTS = 50;
+  const MAX_POINTS = 100;
 
   // ----------
   // POSITION
@@ -32,8 +32,8 @@ export const BufferGeomMesh = ({
       pos.setXYZ(i, vertices[3 * i], vertices[3 * i + 1], vertices[3 * i + 2]);
     }
     pos.needsUpdate = true;
-    mesh.current.geometry.setDrawRange(0, vertices.length / 3);
     if (typeof indices === 'undefined') mesh.current.geometry.setDrawRange(0, vertices.length / 3);
+    else mesh.current.geometry.setDrawRange(0, indices.length);
   }, [indices, vertices]);
 
   // ----------

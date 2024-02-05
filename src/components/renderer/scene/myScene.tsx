@@ -36,7 +36,7 @@ export const MyScene = () => {
       <Controls />
       <ModelGroup>
         <VoronoiCube points={pointDistribution.flat()} />
-        <InnerCube />
+        {/* <InnerCube /> */}
         {/* <BufferGeomPoints positions={new Float32Array(pointDistribution.flat())}>
           <pointsMaterial color={'#00ffff'} />
         </BufferGeomPoints> */}

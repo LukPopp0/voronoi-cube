@@ -8,6 +8,8 @@ export const Settings = () => {
   const setPointDistribution = useVoronoiStore(state => state.setPointDistribution);
   const explosionAmount = useVoronoiStore(state => state.explosionAmount);
   const setExplosionAmount = useVoronoiStore(state => state.setExplosionAmount);
+  const crackSize = useVoronoiStore(state => state.crackSize);
+  const setCrackSize = useVoronoiStore(state => state.setCrackSize);
 
   const [nPointsLoc, setNPointsLoc] = useState<number>(pointDistribution.nPoints);
 
@@ -74,7 +76,7 @@ export const Settings = () => {
         </div>
       )}{' '}
       <div className="preference">
-        <label htmlFor="restriction">Explosion Amount</label>
+        <label htmlFor="explosionAmount">Explosion Amount</label>
         <div>
           <input
             name="explosionAmount"
@@ -84,6 +86,20 @@ export const Settings = () => {
             step={0.05}
             value={explosionAmount}
             onChange={e => setExplosionAmount(Number.parseFloat(e.target.value))}
+          />
+        </div>
+      </div>
+      <div className="preference">
+        <label htmlFor="crackSize">Crack Size</label>
+        <div>
+          <input
+            name="crackSize"
+            type="range"
+            min={0}
+            max={1}
+            step={0.05}
+            value={crackSize}
+            onChange={e => setCrackSize(Number.parseFloat(e.target.value))}
           />
         </div>
       </div>
