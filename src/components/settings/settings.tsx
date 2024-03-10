@@ -3,13 +3,14 @@ import { useVoronoiStore } from '../../store/store';
 import { DownloadButton } from './downloadButton';
 import './settings.scss';
 
+let bufferTimer: ReturnType<typeof setTimeout>;
+const bufferTime = 50;
+
 export const Settings = () => {
   const pointDistribution = useVoronoiStore(state => state.pointDistribution);
   const setPointDistribution = useVoronoiStore(state => state.setPointDistribution);
-  const explosionAmount = useVoronoiStore(state => state.explosionAmount);
-  const setExplosionAmount = useVoronoiStore(state => state.setExplosionAmount);
-  const crackSize = useVoronoiStore(state => state.crackSize);
-  const setCrackSize = useVoronoiStore(state => state.setCrackSize);
+  const gapSize = useVoronoiStore(state => state.gapSize);
+  const setGapSize = useVoronoiStore(state => state.setGapSize);
 
   const [nPointsLoc, setNPointsLoc] = useState<number>(pointDistribution.nPoints);
 
@@ -76,30 +77,22 @@ export const Settings = () => {
         </div>
       )}{' '}
       <div className="preference">
-        <label htmlFor="explosionAmount">Explosion Amount</label>
+        <label htmlFor="gapSize">Gap Size</label>
         <div>
           <input
-            name="explosionAmount"
-            type="range"
-            min={1}
-            max={2}
-            step={0.05}
-            value={explosionAmount}
-            onChange={e => setExplosionAmount(Number.parseFloat(e.target.value))}
-          />
-        </div>
-      </div>
-      <div className="preference">
-        <label htmlFor="crackSize">Crack Size</label>
-        <div>
-          <input
-            name="crackSize"
+            name="gapSize"
             type="range"
             min={0}
             max={1}
             step={0.05}
-            value={crackSize}
-            onChange={e => setCrackSize(Number.parseFloat(e.target.value))}
+            defaultValue={gapSize}
+            onChange={e => {
+              if (bufferTimer) clearTimeout(bufferTimer);
+              bufferTimer = setTimeout(
+                () => setGapSize(Number.parseFloat(e.target.value)),
+                bufferTime
+              );
+            }}
           />
         </div>
       </div>
