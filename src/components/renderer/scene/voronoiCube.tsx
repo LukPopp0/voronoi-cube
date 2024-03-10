@@ -40,6 +40,7 @@ export const VoronoiCube = ({ points = [], size = 10 }: VoronoiCubeProps) => {
     }
 
     const cellElements = cells.map((c, i) => <Cell key={i} cell={c} />);
+    // const cellElements = [<Cell key={1} cell={cells[0]} />];
     return cellElements;
   }, [points, container]);
 

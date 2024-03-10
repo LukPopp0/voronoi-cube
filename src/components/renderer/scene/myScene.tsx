@@ -10,11 +10,13 @@ import {
   fibonacciDistributionRestricted,
   sphereDistributionRestricted,
 } from '../../../utils/randomDistributions';
+import { BufferGeomPoints } from '../../geometries/bufferGeomPoints';
 
 export const MyScene = () => {
   const { nPoints, size, seed, restriction, distribution } = useVoronoiStore(
     state => state.pointDistribution
   );
+  const debug = useVoronoiStore(state => state.debug);
 
   const pointDistribution = useMemo(() => {
     if (nPoints < 2) return [[0, 0, 0]];
@@ -36,11 +38,16 @@ export const MyScene = () => {
       <Controls />
       <ModelGroup>
         <VoronoiCube points={pointDistribution.flat()} />
-        <InnerCube />
-        {/* <BufferGeomPoints positions={new Float32Array(pointDistribution.flat())}>
-          <pointsMaterial color={'#00ffff'} />
-        </BufferGeomPoints> */}
+        <InnerCube size={size} />
       </ModelGroup>
+      {debug && (
+        <>
+          <axesHelper args={[size / 2]} />
+          <BufferGeomPoints positions={new Float32Array(pointDistribution.flat())}>
+            <pointsMaterial color={'#00ffff'} />
+          </BufferGeomPoints>
+        </>
+      )}
     </>
   );
 };

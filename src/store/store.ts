@@ -11,6 +11,9 @@ interface IPointDistribution {
 }
 
 interface IVoronoiSettings {
+  debug: boolean;
+  setDebug: (debug: boolean) => void;
+  innerCubeSize: number;
   darkMode: boolean;
   setDarkMode: (darkMode: boolean) => void;
   pointDistribution: IPointDistribution;
@@ -19,6 +22,8 @@ interface IVoronoiSettings {
   setExplosionAmount: (newAmount: number) => void;
   displayStyle: 'wireframe' | 'solid';
   setDisplayStyle: (displayStyle: 'wireframe' | 'solid') => void;
+  gapSize: number;
+  setGapSize: (gapSize: number) => void;
 }
 
 export const useVoronoiStore = create<IVoronoiSettings>(set => {
@@ -29,7 +34,11 @@ export const useVoronoiStore = create<IVoronoiSettings>(set => {
     seed: urlParams.get('seed') || 1,
     restriction: urlParams.get('restriction') || 0.6,
   };
+
   return {
+    debug: false,
+    setDebug: (debug: boolean) => set({ debug }),
+    innerCubeSize: 0.85,
     darkMode: true,
     setDarkMode: (darkMode: boolean) => set({ darkMode }),
     pointDistribution: {
@@ -57,10 +66,12 @@ export const useVoronoiStore = create<IVoronoiSettings>(set => {
           },
         };
       }),
-    explosionAmount: 1.1,
+    explosionAmount: 1.0,
     setExplosionAmount: (explosionAmount: number) => set({ explosionAmount }),
     displayStyle: 'solid',
     setDisplayStyle: (displayStyle: 'wireframe' | 'solid') => set({ displayStyle }),
+    gapSize: 0.5,
+    setGapSize: (gapSize: number) => set({ gapSize: gapSize }),
   };
 });
 

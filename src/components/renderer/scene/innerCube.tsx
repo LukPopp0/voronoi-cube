@@ -1,6 +1,7 @@
 import { useFrame } from '@react-three/fiber';
 import { useRef } from 'react';
 import { Color, MeshStandardMaterial, PointLight } from 'three';
+import { useVoronoiStore } from '../../../store/store';
 
 type InnerCubeProps = {
   size?: number;
@@ -9,6 +10,7 @@ type InnerCubeProps = {
 export const InnerCube = ({ size = 10 }: InnerCubeProps) => {
   const mat = useRef<MeshStandardMaterial>(null);
   const pointLight = useRef<PointLight>(null);
+  const innerCubeSize = useVoronoiStore(s => s.innerCubeSize);
 
   useFrame((_, delta) => {
     if (!mat.current) return;
@@ -23,14 +25,14 @@ export const InnerCube = ({ size = 10 }: InnerCubeProps) => {
   return (
     <>
       <mesh name="innerCube">
-        <boxGeometry args={[size * 0.75, size * 0.75, size * 0.75]} />
+        <boxGeometry args={[size * innerCubeSize, size * innerCubeSize, size * innerCubeSize]} />
         <meshStandardMaterial
           ref={mat}
           color={new Color(1.0, 1.0, 1.0)}
           emissive={new Color(1.0, 0.1, 0.1)}
         />
       </mesh>
-      <pointLight ref={pointLight} intensity={3} />
+      <pointLight ref={pointLight} intensity={100} />
     </>
   );
 };
