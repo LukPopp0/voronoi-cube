@@ -32,7 +32,7 @@ export const InnerCube = ({ size = 10 }: InnerCubeProps) => {
           emissive={new Color(1.0, 0.1, 0.1)}
         />
       </mesh>
-      <pointLight ref={pointLight} intensity={3} />
+      <pointLight ref={pointLight} intensity={100} />
     </>
   );
 };

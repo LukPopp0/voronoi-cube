@@ -36,9 +36,9 @@ export const Cell = ({ cell }: CellProps) => {
     <>
       <mesh ref={meshRef} position={[cell.x, cell.y, cell.z]}>
         {debug ? (
-          <meshPhongMaterial color="#aaaaaa" flatShading={true} transparent={true} opacity={0.75} />
+          <meshPhongMaterial color="#949494" flatShading={true} transparent={true} opacity={0.75} />
         ) : (
-          <meshPhongMaterial color="#555555" flatShading={true} transparent={false} />
+          <meshPhongMaterial color="#949494" flatShading={true} transparent={false} />
         )}
       </mesh>
     </>

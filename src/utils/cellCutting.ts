@@ -1,4 +1,4 @@
-import { BoxGeometry, BufferAttribute, BufferGeometry, Scene, Vector3 } from 'three';
+import { BoxGeometry, BufferAttribute, BufferGeometry, Vector3 } from 'three';
 import { SUBTRACTION, Evaluator, Brush } from 'three-bvh-csg';
 import { getFaceCenter, getFaceNormal } from './geometryHelper';
 import { VoroCell } from 'voro3d';
