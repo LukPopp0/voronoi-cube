@@ -22,7 +22,6 @@ export const cutCell = (
   if (destructionParameter <= 0) return bg;
 
   const input = new Brush(bg);
-  const output = new Brush();
   const cutter = new Brush();
   let fn: Vector3, fc: Vector3;
 
@@ -44,11 +43,8 @@ export const cutCell = (
     cutterGeom.lookAt(fn.add(fc).sub(fc));
     cutterGeom.translate(fc.x, fc.y, fc.z);
     cutter.geometry = cutterGeom;
-
-    output.geometry = new BufferGeometry();
-    evaluator.evaluate(input, cutter, SUBTRACTION, output);
-    input.geometry = output.geometry;
+    input.geometry = evaluator.evaluate(input, cutter, SUBTRACTION).geometry;
   }
 
-  return output.geometry;
+  return input.geometry;
 };
