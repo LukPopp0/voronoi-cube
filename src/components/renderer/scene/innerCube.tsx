@@ -11,6 +11,7 @@ export const InnerCube = ({ size = 10 }: InnerCubeProps) => {
   const mat = useRef<MeshStandardMaterial>(null);
   const pointLight = useRef<PointLight>(null);
   const innerCubeSize = useVoronoiStore(s => s.innerCubeSize);
+  const debug = useVoronoiStore(s => s.debug);
 
   useFrame((_, delta) => {
     if (!mat.current) return;
@@ -30,6 +31,8 @@ export const InnerCube = ({ size = 10 }: InnerCubeProps) => {
           ref={mat}
           color={new Color(1.0, 1.0, 1.0)}
           emissive={new Color(1.0, 0.1, 0.1)}
+          opacity={debug ? 0.5 : 1.0}
+          transparent={debug}
         />
       </mesh>
       <pointLight ref={pointLight} intensity={100} />

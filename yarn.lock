@@ -2643,11 +2643,6 @@ three-bvh-csg@^0.0.16:
   resolved "https://registry.yarnpkg.com/three-bvh-csg/-/three-bvh-csg-0.0.16.tgz#b5fa39072acebfb1080249a05aeec8bd494b7780"
   integrity sha512-RgC5dY0hAKdfd1bmD3o2CDfmK9GTkvsA1ECzoqTMhSkjSc2zp1z4Wpa5+emLi/EosF5P6+aK2veTxTLZA9+Mhw==
 
-three-csg-ts@^3.1.13:
-  version "3.1.13"
-  resolved "https://registry.yarnpkg.com/three-csg-ts/-/three-csg-ts-3.1.13.tgz#090eda7120185505d0433f8fa043529629df61c7"
-  integrity sha512-CzqE7NmXQimVh2cnG62/wbWWiRVg0TaGhBbn0Km9Zwt+ZUVN5rYhDf0y/XN52MyxPD5apdaeFJcCQcmhmA+o/Q==
-
 three-mesh-bvh@^0.6.0:
   version "0.6.1"
   resolved "https://registry.npmjs.org/three-mesh-bvh/-/three-mesh-bvh-0.6.1.tgz"
