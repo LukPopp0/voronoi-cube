@@ -44,7 +44,7 @@ export const useVoronoiStore = create<IVoronoiSettings>(set => {
     pointDistribution: {
       distribution: defaults.distribution,
       nPoints: clamp(Number(defaults.nPoints), 2, 1000),
-      size: 10,
+      size: 15,
       seed: Number(defaults.seed),
       restriction: clamp(Number(defaults.restriction), 0, 1),
     },
