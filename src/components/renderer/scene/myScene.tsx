@@ -37,7 +37,7 @@ export const MyScene = () => {
       <Lighting />
       <Controls />
       <ModelGroup>
-        <VoronoiCube points={pointDistribution.flat()} />
+        <VoronoiCube points={pointDistribution.flat()} size={size} />
         <InnerCube size={size} />
       </ModelGroup>
       {debug && (

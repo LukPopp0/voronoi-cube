@@ -20,7 +20,7 @@ const download = (filename: string, text: string) => {
 
 const CUT_FIRST_CELL = true;
 const CUTOUT_WALL_THICKNESS = 0.05;
-const CUTOUT_SIZE = 2.5;
+const CUTOUT_SIZE = 7.5 / 2;
 
 export const DownloadButton = () => {
   const scene = useContext(SceneContext);
