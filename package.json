@@ -17,6 +17,7 @@
     "react-dom": "^18.2.0",
     "three": "^0.158.0",
     "three-bvh-csg": "^0.0.16",
+    "three-csg-ts": "^3.2.0",
     "three-mesh-bvh": "^0.7.3",
     "voro3d": "^0.0.5",
     "zustand": "^4.2.0"

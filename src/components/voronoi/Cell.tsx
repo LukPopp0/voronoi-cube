@@ -3,14 +3,15 @@ import { VoroCell } from 'voro3d';
 import { Mesh } from 'three';
 import { useVoronoiStore } from '../../store/store';
 import { polygonToTriangles } from '../../utils/geometryHelper';
-import { cutCell } from '../../utils/cellCutting';
+import { cutCell, cutCell2 } from '../../utils/cellCutting';
 import { MeshProps } from '@react-three/fiber';
 
 type CellProps = {
   cell: VoroCell;
+  children?: React.ReactNode;
 } & MeshProps;
 
-export const Cell = ({ cell, ...meshProps }: CellProps) => {
+export const Cell = ({ cell, children, ...meshProps }: CellProps) => {
   const size = useVoronoiStore(state => state.pointDistribution.size);
   const gapSize = useVoronoiStore(state => state.gapSize);
   const debug = useVoronoiStore(state => state.debug);
@@ -36,11 +37,7 @@ export const Cell = ({ cell, ...meshProps }: CellProps) => {
   return (
     <>
       <mesh ref={meshRef} position={[cell.x, cell.y, cell.z]} {...meshProps}>
-        {debug ? (
-          <meshPhongMaterial color="#949494" flatShading={true} transparent={true} opacity={0.75} />
-        ) : (
-          <meshPhongMaterial color="#949494" flatShading={true} transparent={false} />
-        )}
+        {children}
       </mesh>
     </>
   );

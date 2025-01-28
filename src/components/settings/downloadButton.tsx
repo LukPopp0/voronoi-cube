@@ -83,8 +83,11 @@ export const DownloadButton = () => {
       }
     }
 
-    const data = new STLExporter().parse(group);
-    download('voronoi.stl', data);
+    voronoiCube.children.forEach((child, idx) => {
+      const data = new STLExporter().parse(child);
+      // const data = new STLExporter().parse(group);
+      download(`voronoi - ${idx}.stl`, data);
+    });
   }, [cubeSize, scene]);
   return <button onClick={() => downloadVoronoi()}>Download</button>;
 };

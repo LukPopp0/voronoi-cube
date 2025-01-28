@@ -11,6 +11,7 @@ export const Settings = () => {
   const setPointDistribution = useVoronoiStore(state => state.setPointDistribution);
   const gapSize = useVoronoiStore(state => state.gapSize);
   const setGapSize = useVoronoiStore(state => state.setGapSize);
+  const debug = useVoronoiStore(state => state.debug);
 
   const [nPointsLoc, setNPointsLoc] = useState<number>(pointDistribution.nPoints);
 
@@ -95,6 +96,17 @@ export const Settings = () => {
             }}
           />
         </div>
+      </div>
+      <div className="preference">
+        <label htmlFor="debug">Debug</label>
+        <input
+          name="debug"
+          type="checkbox"
+          checked={debug}
+          onChange={e => {
+            useVoronoiStore.setState({ debug: e.target.checked });
+          }}
+        />
       </div>
       <div>
         <DownloadButton />

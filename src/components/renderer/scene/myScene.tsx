@@ -18,9 +18,13 @@ export const MyScene = () => {
   );
   const debug = useVoronoiStore(state => state.debug);
 
-  const pointDistribution = useMemo(() => {
+  const pointDistribution: number[][] = useMemo(() => {
     if (nPoints < 2) return [[0, 0, 0]];
     const s = size - 0.0001;
+    // return [
+    //   [0, -0.49, 0],
+    //   [0, 0.49, 0],
+    // ];
     switch (distribution) {
       case 'fibonacci':
         return cubeDistribution(nPoints, s, seed + nPoints, fibonacciDistributionRestricted);

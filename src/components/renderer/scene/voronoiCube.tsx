@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { Voro3D } from 'voro3d';
 import { Cell } from '../../voronoi/Cell';
+import { useVoronoiStore } from '../../../store/store';
 
 type VoronoiCubeProps = {
   points: number[];
@@ -10,6 +11,8 @@ type VoronoiCubeProps = {
 const voroContainer = await Voro3D.create(-1, 1, -1, 1, -1, 1, 2, 2, 2);
 
 export const VoronoiCube = ({ points = [], size = 10 }: VoronoiCubeProps) => {
+  const debug = useVoronoiStore(state => state.debug);
+
   useEffect(() => {
     voroContainer.xMin = -size / 2;
     voroContainer.xMax = size / 2;
@@ -32,6 +35,7 @@ export const VoronoiCube = ({ points = [], size = 10 }: VoronoiCubeProps) => {
 
     try {
       cells = voroContainer.computeCells(points);
+      console.log({ cells });
     } catch {
       console.log('Creating voronoi cells failed. Reloading.');
       window.location.reload();
@@ -39,13 +43,25 @@ export const VoronoiCube = ({ points = [], size = 10 }: VoronoiCubeProps) => {
     }
 
     const cellElements = cells.map((c, i) => (
-      <Cell key={i} userData={{ particleID: c.particleID }} cell={c} />
+      <Cell key={i} userData={{ particleID: c.particleID }} cell={c}>
+        {debug ? (
+          <meshPhongMaterial
+            color="#C4C4C4"
+            flatShading={true}
+            transparent={true}
+            opacity={0.75}
+            wireframe
+          />
+        ) : (
+          <meshPhongMaterial color="#949494" flatShading={false} transparent={false} />
+        )}
+      </Cell>
     ));
     // const cellElements = [
     //   <Cell key={1} userData={{ particleID: cells[0].particleID }} cell={cells[0]} />,
     // ];
     return cellElements;
-  }, [points]);
+  }, [debug, points]);
 
   return <group name="voronoiCube">{voronoiCells}</group>;
 };
