@@ -18,7 +18,8 @@ const download = (filename: string, text: string) => {
   document.body.removeChild(element);
 };
 
-const CUT_FIRST_CELL = true;
+const CUT_FIRST_CELL = false;
+const TRANSLATE_OUTPUT = true;
 const CUTOUT_WALL_THICKNESS = 0.05;
 const CUTOUT_SIZE = 7.5 / 2;
 
@@ -37,6 +38,7 @@ export const DownloadButton = () => {
     const innerCubeBrush = new Brush((innerCube as Mesh).geometry.clone());
 
     // Cut each cell with the inner cube
+    const cellPositions: number[][] = [];
     for (let i = 0; i < voronoiCube.children.length; ++i) {
       const part = voronoiCube.children[i];
       if (part.type === 'Mesh') {
@@ -80,11 +82,25 @@ export const DownloadButton = () => {
         const output = evaluator.evaluate(cell, innerCubeBrush, SUBTRACTION);
 
         group.add(output);
+
+        // Download individual parts as well
+        const partClone = new Mesh((part as Mesh).geometry.clone());
+        if (TRANSLATE_OUTPUT) {
+          (partClone as Mesh).geometry.translate(part.position.x, part.position.y, part.position.z);
+        }
+        cellPositions.push([part.position.x, part.position.y, part.position.z]);
+        const data = new STLExporter().parse(partClone);
+        console.log(`Downloading ${i + 1}/${voronoiCube.children.length}`);
+        // if (i > 9) {
+        download(`voronoi-${i}.stl`, data);
+        // }
       }
     }
-
+    download('cellPositions.json', JSON.stringify(cellPositions));
+    console.log('Downloading object...');
     const data = new STLExporter().parse(group);
     download('voronoi.stl', data);
+    console.log('Downloading object... Done.');
   }, [cubeSize, scene]);
   return <button onClick={() => downloadVoronoi()}>Download</button>;
 };
