@@ -218,3 +218,17 @@ export const fibonacciDistributionRestricted = (
   arr.unshift([0, -radius, 0]);
   return arr;
 };
+
+export const randomInRect = (
+  amount: number,
+  sizeX: number,
+  sizeY: number,
+  seed?: number
+): [number, number][] => {
+  const random = new MersenneTwister(seed);
+  const arr: [number, number][] = [];
+  for (let i = 0; i < amount; i++) {
+    arr.push([random.random() * sizeX - sizeX / 2, random.random() * sizeY - sizeY / 2]);
+  }
+  return arr;
+};

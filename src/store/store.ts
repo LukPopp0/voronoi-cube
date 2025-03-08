@@ -36,7 +36,7 @@ export const useVoronoiStore = create<IVoronoiSettings>(set => {
   };
 
   return {
-    debug: false,
+    debug: true,
     setDebug: (debug: boolean) => set({ debug }),
     innerCubeSize: 0.85,
     darkMode: true,

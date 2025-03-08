@@ -1,12 +1,8 @@
 import { BoxGeometry, BufferAttribute, BufferGeometry, Vector3 } from 'three';
-import { SUBTRACTION, Evaluator, Brush } from 'three-bvh-csg';
 import { getFaceCenter, getFaceNormal } from './geometryHelper';
 import { VoroCell } from 'voro3d';
 
 const EPSILON = 0.005;
-
-const evaluator = new Evaluator();
-evaluator.attributes = ['position', 'normal'];
 
 export const cutCell = (
   cell: VoroCell,
@@ -21,8 +17,6 @@ export const cutCell = (
 
   if (destructionParameter <= 0) return bg;
 
-  const input = new Brush(bg);
-  const cutter = new Brush();
   let fn: Vector3, fc: Vector3;
 
   for (let fi = 0; fi < cell.faces.length; ++fi) {
@@ -42,9 +36,7 @@ export const cutCell = (
     const cutterGeom = new BoxGeometry(5 * cubeSize, 5 * cubeSize, destructionParameter);
     cutterGeom.lookAt(fn.add(fc).sub(fc));
     cutterGeom.translate(fc.x, fc.y, fc.z);
-    cutter.geometry = cutterGeom;
-    input.geometry = evaluator.evaluate(input, cutter, SUBTRACTION).geometry;
   }
 
-  return input.geometry;
+  return bg;
 };
