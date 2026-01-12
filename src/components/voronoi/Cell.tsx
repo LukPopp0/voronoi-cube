@@ -4,11 +4,11 @@ import { Mesh } from 'three';
 import { useVoronoiStore } from '../../store/store';
 import { polygonToTriangles } from '../../utils/geometryHelper';
 import { cutCell } from '../../utils/cellCutting';
-import { MeshProps } from '@react-three/fiber';
+import type { ThreeElements } from '@react-three/fiber';
 
 type CellProps = {
   cell: VoroCell;
-} & MeshProps;
+} & ThreeElements['mesh'];
 
 export const Cell = ({ cell, ...meshProps }: CellProps) => {
   const size = useVoronoiStore(state => state.pointDistribution.size);

@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from 'react';
+import type { ReactElement } from 'react';
 import { Voro3D } from 'voro3d';
 import { Cell } from '../../voronoi/Cell';
 
@@ -25,7 +26,7 @@ export const VoronoiCube = ({ points = [], size = 10 }: VoronoiCubeProps) => {
     voroContainer.nZ = Math.max(2, Math.floor(points.length / 10));
   }, [points.length]);
 
-  const voronoiCells: JSX.Element[] = useMemo(() => {
+  const voronoiCells: ReactElement[] = useMemo(() => {
     if (!voroContainer) return [];
     console.log(`\nCREATING VORONOI (${points.length / 3} points)\n`);
     let cells;

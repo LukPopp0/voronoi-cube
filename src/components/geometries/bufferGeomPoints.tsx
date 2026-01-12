@@ -1,10 +1,11 @@
 import { ReactElement, useEffect, useRef } from 'react';
 import { BufferAttribute, Points } from 'three';
+import type { ThreeElements } from '@react-three/fiber';
 
 type BufferGeomPointsProps = {
   children?: ReactElement | ReactElement[];
   positions?: Float32Array;
-} & JSX.IntrinsicElements['points'];
+} & ThreeElements['points'];
 export const BufferGeomPoints = ({ children, positions, ...pointProps }: BufferGeomPointsProps) => {
   const points = useRef<Points>(null);
 

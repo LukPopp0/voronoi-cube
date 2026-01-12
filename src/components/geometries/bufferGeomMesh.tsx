@@ -1,12 +1,13 @@
 import { ReactElement, useEffect, useRef } from 'react';
 import { BufferAttribute, Mesh } from 'three';
+import type { ThreeElements } from '@react-three/fiber';
 
 type BufferGeomMeshProps = {
   children?: ReactElement | ReactElement[];
   vertices: number[];
   indices?: number[];
   normals?: number[];
-} & JSX.IntrinsicElements['mesh'];
+} & ThreeElements['mesh'];
 export const BufferGeomMesh = ({
   children,
   vertices,
