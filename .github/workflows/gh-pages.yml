@@ -44,13 +44,6 @@ jobs:
       - name: Build 🏗
         run: pnpm build
 
-      - name: Copy sitemap
-        run: cp sitemap.xml dist
-
-      #      - name: Test 🔍
-      #        run: |
-      #          npm test
-
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4.6.9
         with:
