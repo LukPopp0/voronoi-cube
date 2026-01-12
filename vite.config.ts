@@ -5,6 +5,9 @@ import wasm from 'vite-plugin-wasm';
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react(), wasm()],
+  optimizeDeps: {
+    exclude: ['voro3d'],
+  },
   build: {
     target: 'esnext',
   },
