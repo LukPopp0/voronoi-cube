@@ -54,7 +54,7 @@ export const useVoronoiStore = create<IVoronoiSettings>(set => {
           window.history.replaceState(
             '',
             '',
-            updateURLParameter(window.location.href, p, (data as Record<string, any>)[p])
+            updateURLParameter(window.location.href, p, (data as Record<string, any>)[p]),
           );
         }
 
