@@ -14,16 +14,17 @@ export const Cell = ({ cell, ...meshProps }: CellProps) => {
   const size = useVoronoiStore(state => state.pointDistribution.size);
   const gapSize = useVoronoiStore(state => state.gapSize);
   const debug = useVoronoiStore(state => state.debug);
+  const registerCutCell = useVoronoiStore(state => state.registerCutCell);
   const meshRef = useRef<Mesh>(null);
   const [debugStartTime, setDebugStartTime] = useState<number>(-1);
 
-  const { geometry, cutCell } = useCellCuttingWorker();
+  const { geometry, cellData, cutCell } = useCellCuttingWorker();
 
   const triangleIndices = useMemo(() => cell.faces.map(polygonToTriangles), [cell.faces]);
 
   useEffect(() => {
     setDebugStartTime(window.performance.now());
-    cutCell(cell, triangleIndices.flat().flat(), gapSize, size);
+    cutCell(cell, triangleIndices.flat().flat(), gapSize, size, cell.particleID);
   }, [cell, triangleIndices, gapSize, size, cutCell, debug]);
 
   useEffect(() => {
@@ -38,6 +39,10 @@ export const Cell = ({ cell, ...meshProps }: CellProps) => {
     meshRef.current.geometry = geometry;
     meshRef.current.updateMatrixWorld();
   }, [geometry, debug, debugStartTime]);
+
+  useEffect(() => {
+    if (cellData) registerCutCell(cellData);
+  }, [cellData, registerCutCell]);
 
   return (
     <>

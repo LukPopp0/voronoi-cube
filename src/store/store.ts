@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { updateURLParameter } from '../utils/urlEdit';
 import { clamp } from 'three/src/math/MathUtils';
+import { CutCellData } from '../workers/types/workerOutput';
 
 interface IPointDistribution {
   distribution: 'simple' | 'fibonacci' | string;
@@ -24,6 +25,9 @@ interface IVoronoiSettings {
   setDisplayStyle: (displayStyle: 'wireframe' | 'solid') => void;
   gapSize: number;
   setGapSize: (gapSize: number) => void;
+  cutCells: Map<number, CutCellData>;
+  registerCutCell: (cellData: CutCellData) => void;
+  clearCutCells: () => void;
 }
 
 export const useVoronoiStore = create<IVoronoiSettings>(set => {
@@ -72,6 +76,14 @@ export const useVoronoiStore = create<IVoronoiSettings>(set => {
     setDisplayStyle: (displayStyle: 'wireframe' | 'solid') => set({ displayStyle }),
     gapSize: 0.5,
     setGapSize: (gapSize: number) => set({ gapSize: gapSize }),
+    cutCells: new Map<number, CutCellData>(),
+    registerCutCell: (cellData: CutCellData) =>
+      set(state => {
+        const newMap = new Map(state.cutCells);
+        newMap.set(cellData.particleId, cellData);
+        return { cutCells: newMap };
+      }),
+    clearCutCells: () => set({ cutCells: new Map<number, CutCellData>() }),
   };
 });
 

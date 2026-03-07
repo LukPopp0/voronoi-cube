@@ -1,12 +1,12 @@
 import { BufferAttribute, BufferGeometry, Vector3 } from 'three';
 import { VoroCell } from 'voro3d';
 import { CellDataInput } from '../workers/types/workerInput';
-import { WorkerOutput } from '../workers/types/workerOutput';
+import { CutCellData } from '../workers/types/workerOutput';
 
 const EPSILON = 1e-9;
 
 /**
- * Represents a plane in 3D space using the equation: normal · p = distance
+ * Represents a plane in 3D space using the equation: normal . p = distance
  */
 interface Plane {
   normal: Vector3;
@@ -166,31 +166,23 @@ const isBorderFace = (
 
 /**
  * Core algorithm that shrinks a Voronoi cell by moving each face inward.
- * Returns raw arrays suitable for transfer to/from workers.
+ * Returns polygon-level cell data (vertices + face index arrays).
  */
 export const cutCellCore = (
   cell: CellDataInput,
   triangleIndices: number[],
   destructionParameter: number,
   cubeSize: number,
-): WorkerOutput => {
-  // If no shrinking needed, return original geometry data
+): CutCellData => {
+  // If no shrinking needed, return original cell data
   if (destructionParameter <= 0) {
-    const positions = new Float32Array(cell.vertices);
-
-    // Compute normals for original geometry
-    const bg = new BufferGeometry();
-    bg.setIndex(triangleIndices);
-    bg.setAttribute('position', new BufferAttribute(positions, 3));
-    bg.computeVertexNormals();
-
-    const normalAttr = bg.getAttribute('normal');
-    const normals = new Float32Array(normalAttr.array);
-
     return {
-      positions,
-      normals,
-      indices: new Uint32Array(triangleIndices),
+      vertices: Array.from(cell.vertices),
+      faces: cell.faces.map(f => [...f]),
+      particleId: -1,
+      x: cell.x,
+      y: cell.y,
+      z: cell.z,
     };
   }
 
@@ -262,9 +254,12 @@ export const cutCellCore = (
   // If no valid vertices found (cell completely collapsed), return empty geometry
   if (newVertices.length < 4) {
     return {
-      positions: new Float32Array([]),
-      normals: new Float32Array([]),
-      indices: new Uint32Array([]),
+      vertices: [],
+      faces: [],
+      particleId: -1,
+      x: cell.x,
+      y: cell.y,
+      z: cell.z,
     };
   }
 
@@ -302,21 +297,58 @@ export const cutCellCore = (
     newFaceNormals.push(planes[pi].normal.clone());
   }
 
-  // Step 6: Triangulate and build geometry
+  // Step 6: Build polygon-level cell data with shared vertex pool
+  const vertexPool: number[] = [];
+  const faceIndexArrays: number[][] = [];
+  const vertexMap = new Map<string, number>();
+
+  const getOrAddPoolVertex = (v: Vector3): number => {
+    const key = `${v.x.toFixed(9)}_${v.y.toFixed(9)}_${v.z.toFixed(9)}`;
+    if (vertexMap.has(key)) return vertexMap.get(key)!;
+    const idx = vertexPool.length / 3;
+    vertexPool.push(v.x, v.y, v.z);
+    vertexMap.set(key, idx);
+    return idx;
+  };
+
+  for (const face of newFaces) {
+    const indices = face.map(v => getOrAddPoolVertex(v));
+    faceIndexArrays.push(indices);
+  }
+
+  return {
+    vertices: vertexPool,
+    faces: faceIndexArrays,
+    particleId: -1,
+    x: cell.x,
+    y: cell.y,
+    z: cell.z,
+  };
+};
+
+/**
+ * Triangulate CutCellData into positions/normals/indices arrays for rendering.
+ */
+export const triangulateCellData = (
+  cellData: CutCellData,
+): { positions: Float32Array; normals: Float32Array; indices: Uint32Array } => {
+  if (cellData.vertices.length === 0 || cellData.faces.length === 0) {
+    return {
+      positions: new Float32Array([]),
+      normals: new Float32Array([]),
+      indices: new Uint32Array([]),
+    };
+  }
+
+  const cellCenter = new Vector3(0, 0, 0);
   const positions: number[] = [];
   const normals: number[] = [];
   const indices: number[] = [];
-
-  // Use position + normal as key to create unique vertices (for flat shading)
-  const vertexIndexMap: Map<string, number> = new Map();
+  const vertexIndexMap = new Map<string, number>();
 
   const getOrAddVertex = (v: Vector3, n: Vector3): number => {
     const key = `${v.x.toFixed(6)}_${v.y.toFixed(6)}_${v.z.toFixed(6)}_${n.x.toFixed(6)}_${n.y.toFixed(6)}_${n.z.toFixed(6)}`;
-
-    if (vertexIndexMap.has(key)) {
-      return vertexIndexMap.get(key)!;
-    }
-
+    if (vertexIndexMap.has(key)) return vertexIndexMap.get(key)!;
     const index = positions.length / 3;
     positions.push(v.x, v.y, v.z);
     normals.push(n.x, n.y, n.z);
@@ -324,17 +356,46 @@ export const cutCellCore = (
     return index;
   };
 
-  // Triangulate each face
-  for (let fi = 0; fi < newFaces.length; fi++) {
-    const face = newFaces[fi];
-    const normal = newFaceNormals[fi];
+  const verts = cellData.vertices;
 
+  for (const face of cellData.faces) {
     if (face.length < 3) continue;
 
+    // Compute face normal
+    const v0 = new Vector3(verts[face[0] * 3], verts[face[0] * 3 + 1], verts[face[0] * 3 + 2]);
+    const v1 = new Vector3(verts[face[1] * 3], verts[face[1] * 3 + 1], verts[face[1] * 3 + 2]);
+    const v2 = new Vector3(verts[face[2] * 3], verts[face[2] * 3 + 1], verts[face[2] * 3 + 2]);
+
+    const edge1 = v1.clone().sub(v0);
+    const edge2 = v2.clone().sub(v0);
+    const normal = edge1.cross(edge2).normalize();
+
+    // Compute face center
+    const faceCenter = new Vector3(0, 0, 0);
+    for (const idx of face) {
+      faceCenter.add(new Vector3(verts[idx * 3], verts[idx * 3 + 1], verts[idx * 3 + 2]));
+    }
+    faceCenter.divideScalar(face.length);
+
+    // Ensure normal points outward
+    const toCenter = cellCenter.clone().sub(faceCenter);
+    if (normal.dot(toCenter) > 0) {
+      normal.negate();
+    }
+
+    // Fan triangulation (works for convex faces)
     for (let i = 1; i < face.length - 1; i++) {
-      const i0 = getOrAddVertex(face[0], normal);
-      const i1 = getOrAddVertex(face[i], normal);
-      const i2 = getOrAddVertex(face[i + 1], normal);
+      const fv0 = new Vector3(verts[face[0] * 3], verts[face[0] * 3 + 1], verts[face[0] * 3 + 2]);
+      const fv1 = new Vector3(verts[face[i] * 3], verts[face[i] * 3 + 1], verts[face[i] * 3 + 2]);
+      const fv2 = new Vector3(
+        verts[face[i + 1] * 3],
+        verts[face[i + 1] * 3 + 1],
+        verts[face[i + 1] * 3 + 2],
+      );
+
+      const i0 = getOrAddVertex(fv0, normal);
+      const i1 = getOrAddVertex(fv1, normal);
+      const i2 = getOrAddVertex(fv2, normal);
 
       indices.push(i0, i1, i2);
     }
@@ -358,7 +419,8 @@ export const cutCell = (
   destructionParameter: number,
   cubeSize: number,
 ): BufferGeometry => {
-  const result = cutCellCore(cell, triangleIndices, destructionParameter, cubeSize);
+  const cellData = cutCellCore(cell, triangleIndices, destructionParameter, cubeSize);
+  const result = triangulateCellData(cellData);
 
   const bg = new BufferGeometry();
   if (result.positions.length > 0) {

@@ -11,4 +11,5 @@ export interface WorkerInput {
   triangleIndices: number[];
   destructionParameter: number;
   cubeSize: number;
+  particleId: number;
 }

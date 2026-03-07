@@ -26,12 +26,6 @@ importers:
       three:
         specifier: ^0.182.0
         version: 0.182.0
-      three-bvh-csg:
-        specifier: ^0.0.17
-        version: 0.0.17(three-mesh-bvh@0.9.5(three@0.182.0))(three@0.182.0)
-      three-mesh-bvh:
-        specifier: ^0.9.5
-        version: 0.9.5(three@0.182.0)
       voro3d:
         specifier: ^0.0.7
         version: 0.0.7
@@ -1884,19 +1878,8 @@ packages:
     resolution: {integrity: sha512-MeQTA1r0litLUf0Rp/iisCaL8761lKAZHaimlbGK4j0HysC4PLfqygQj9srcs0m2RdtDYnF8UuYyKpbjHYp7Jw==}
     engines: {node: ^14.18.0 || >=16.0.0}
 
-  three-bvh-csg@0.0.17:
-    resolution: {integrity: sha512-iEkHDF8GRfGM6593Cuw8SnF1vfENCp46gIAtRzuL4nGXGWPcR1sbTBwM9ptDONb5twqlZp5WkAKya5aBKe2qcA==}
-    peerDependencies:
-      three: '>=0.151.0'
-      three-mesh-bvh: '>=0.6.6'
-
   three-mesh-bvh@0.8.3:
     resolution: {integrity: sha512-4G5lBaF+g2auKX3P0yqx+MJC6oVt6sB5k+CchS6Ob0qvH0YIhuUk1eYr7ktsIpY+albCqE80/FVQGV190PmiAg==}
-    peerDependencies:
-      three: '>= 0.159.0'
-
-  three-mesh-bvh@0.9.5:
-    resolution: {integrity: sha512-MYpwzUWDxPAKGhSBFin9E/7K4AAHyIm4IfMZQ/3+Z/jq/swa2dAhXx0yUNDd9mjlhLuzXkMBTGDZioL2GSlIfQ==}
     peerDependencies:
       three: '>= 0.159.0'
 
@@ -4070,16 +4053,7 @@ snapshots:
     dependencies:
       '@pkgr/core': 0.2.9
 
-  three-bvh-csg@0.0.17(three-mesh-bvh@0.9.5(three@0.182.0))(three@0.182.0):
-    dependencies:
-      three: 0.182.0
-      three-mesh-bvh: 0.9.5(three@0.182.0)
-
   three-mesh-bvh@0.8.3(three@0.182.0):
-    dependencies:
-      three: 0.182.0
-
-  three-mesh-bvh@0.9.5(three@0.182.0):
     dependencies:
       three: 0.182.0
 
