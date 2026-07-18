@@ -13,8 +13,11 @@
  *
  *   PLANE_TOL     The tolerance for classifying a point relative to a plane
  *                 (inside/outside a half-space, on/off a plane). Used by
- *                 clipping (Sutherland-Hodgman), inside-cube tests, and cap-
- *                 face vertex collection.
+ *                 clipping (Sutherland-Hodgman), inside-cube tests, cap-face
+ *                 vertex collection, cube-corner-inside-cell test
+ *                 (printCutting.ts ~265), and vertex-validity filter
+ *                 (cellCuttingAlgorithm.ts ~224). Last two were loosened
+ *                 10x (1e-8 -> 1e-7) during unification for consistency.
  *
  *                 DEFECT D3 was exactly this tolerance disagreeing between
  *                 call sites: clipping classified a point as outside while
