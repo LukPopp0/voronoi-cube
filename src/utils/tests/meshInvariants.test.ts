@@ -99,7 +99,8 @@ describe('checkCutCellData', () => {
 
     const violations = checkCutCellData(cell);
     const unpaired = violations.filter(v => v.kind === 'unpaired-edge');
-    expect(unpaired.length).toBeGreaterThanOrEqual(1);
+    // Hand-verified: edges (2->4), (4->3), (3->2) each lack a reverse match.
+    expect(unpaired).toHaveLength(3);
   });
 
   it('detects a degenerate/sliver face (zero-area collinear triangle)', () => {
@@ -126,6 +127,23 @@ describe('checkCutCellData', () => {
     };
     const violations = checkCutCellData(cell);
     expect(violations.some(v => v.kind === 'non-convex')).toBe(true);
+  });
+
+  it('detects a self-intersecting bowtie quad face', () => {
+    // Planar quad A(0,0) B(4,0) C(5,3) D(1,4), but wound as A,C,B,D so edges
+    // A-C and B-D (the two "diagonals" of the underlying convex quad) cross.
+    // Net signed area is non-zero (2), so Newell's method still yields a
+    // valid face normal and checkFaceShape's crossing test runs.
+    const cell: CutCellData = {
+      vertices: [0, 0, 0, 4, 0, 0, 5, 3, 0, 1, 4, 0],
+      faces: [[0, 2, 1, 3]],
+      particleId: 0,
+      x: 0,
+      y: 0,
+      z: 0,
+    };
+    const violations = checkCutCellData(cell);
+    expect(violations.some(v => v.kind === 'self-intersecting')).toBe(true);
   });
 
   it('detects duplicate pooled vertices', () => {
@@ -199,5 +217,38 @@ describe('meshStats', () => {
     expect(stats.unpairedEdges).toBe(0);
     expect(stats.minAspectQuality).toBeGreaterThan(0);
     expect(stats.minAspectQuality).toBeLessThanOrEqual(1);
+  });
+
+  it('increments its dirty-input counters for a hand-built dirty mesh', () => {
+    // cell.vertices holds a duplicate pair (indices 0 and 1 coincide) -
+    // exercises duplicateVertexPairs independently of the mesh below.
+    const dirtyCell: CutCellData = {
+      vertices: [0, 0, 0, 0, 0, 0, 5, 5, 5],
+      faces: [],
+      particleId: 0,
+      x: 0,
+      y: 0,
+      z: 0,
+    };
+
+    // Two disconnected, unclosed triangles: the second is collinear (a
+    // sliver, zero area). Neither triangle's edges have a reverse match
+    // anywhere else in the mesh, so every edge is unpaired.
+    const dirtyMesh = {
+      positions: [
+        0, 0, 0, 1, 0, 0, 0, 1, 0, // triangle 1 (valid, open)
+        0, 0, 0, 1, 0, 0, 2, 0, 0, // triangle 2 (collinear, sliver)
+      ],
+      normals: [
+        0, 0, 1, 0, 0, 1, 0, 0, 1,
+        0, 0, 1, 0, 0, 1, 0, 0, 1,
+      ],
+      indices: [0, 1, 2, 3, 4, 5],
+    };
+
+    const stats = meshStats(dirtyCell, dirtyMesh);
+    expect(stats.sliverTriangles).toBeGreaterThan(0);
+    expect(stats.duplicateVertexPairs).toBeGreaterThan(0);
+    expect(stats.unpairedEdges).toBeGreaterThan(0);
   });
 });
