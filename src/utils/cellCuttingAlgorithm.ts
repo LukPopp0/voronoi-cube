@@ -339,7 +339,6 @@ export const triangulateCellData = (
     };
   }
 
-  const cellCenter = new Vector3(0, 0, 0);
   const positions: number[] = [];
   const normals: number[] = [];
   const indices: number[] = [];
@@ -365,22 +364,13 @@ export const triangulateCellData = (
     const v1 = new Vector3(verts[face[1] * 3], verts[face[1] * 3 + 1], verts[face[1] * 3 + 2]);
     const v2 = new Vector3(verts[face[2] * 3], verts[face[2] * 3 + 1], verts[face[2] * 3 + 2]);
 
+    // Normal is derived purely from vertex winding (fan order) - winding is
+    // the single source of truth, no "away from center" heuristic. This must
+    // match the winding produced upstream (sortFaceVertices / buildCapFaces),
+    // whichever emitted this face.
     const edge1 = v1.clone().sub(v0);
     const edge2 = v2.clone().sub(v0);
     const normal = edge1.cross(edge2).normalize();
-
-    // Compute face center
-    const faceCenter = new Vector3(0, 0, 0);
-    for (const idx of face) {
-      faceCenter.add(new Vector3(verts[idx * 3], verts[idx * 3 + 1], verts[idx * 3 + 2]));
-    }
-    faceCenter.divideScalar(face.length);
-
-    // Ensure normal points outward
-    const toCenter = cellCenter.clone().sub(faceCenter);
-    if (normal.dot(toCenter) > 0) {
-      normal.negate();
-    }
 
     // Fan triangulation (works for convex faces)
     for (let i = 1; i < face.length - 1; i++) {

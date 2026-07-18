@@ -162,6 +162,21 @@ const sortPolygonVertices = (vertices: Vector3[], normal: Vector3): Vector3[] =>
     .map(va => va.vertex);
 };
 
+// --- Newell's method: robust polygon normal from winding --------------------
+
+const computeNewellNormal = (polygon: Polygon): Vector3 => {
+  const normal = new Vector3(0, 0, 0);
+  const n = polygon.length;
+  for (let i = 0; i < n; i++) {
+    const current = polygon[i];
+    const next = polygon[(i + 1) % n];
+    normal.x += (current.y - next.y) * (current.z + next.z);
+    normal.y += (current.z - next.z) * (current.x + next.x);
+    normal.z += (current.x - next.x) * (current.y + next.y);
+  }
+  return normal.normalize();
+};
+
 // --- Build 6 inner-cube clip planes (in cell-local coordinates) ------------
 
 const buildInnerCubePlanes = (
@@ -290,6 +305,15 @@ const buildCapFaces = (
     const capNormal = cubePlanes[pi].normal.clone().negate();
 
     const sorted = sortPolygonVertices(verts, capNormal);
+
+    // The radial sort's winding direction is basis-dependent (arbitrary sign
+    // relative to capNormal). Winding is the single source of truth for
+    // downstream normal derivation (triangulateCellData / STLExporter), so
+    // make it deterministic: reverse if the sorted polygon's actual winding
+    // (Newell's method) disagrees with the intended cap normal.
+    if (computeNewellNormal(sorted).dot(capNormal) < 0) {
+      sorted.reverse();
+    }
 
     // Map sorted vertices back to pool indices
     const faceIndices = sorted.map(v => pool.getOrAdd(v));

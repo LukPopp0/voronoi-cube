@@ -67,15 +67,12 @@ describe('F1 concentric', () => {
     expect(checkCutCellData(cutFixture(F1))).toEqual([]);
   });
 
-  // DEFECT D2 confirmed: cap faces close the cavity with a "cavity-facing"
-  // normal (buildCapFaces negates the cube-plane normal), but
-  // triangulateCellData's fan-triangulation re-derives its own outward
-  // normal from vertex winding without regard to that intent, and does not
-  // reorder the fan to match - so cap-face triangles end up with a
-  // geometric winding normal that opposes the stored (correct) normal.
-  // Observed: all 12 cap-face triangles (of 24 total) report
-  // 'normal-winding-mismatch'; the 12 original-face triangles are fine.
-  it.fails('checkTriangulated reports zero violations', () => {
+  // DEFECT D2 fixed: buildCapFaces now orients each cap polygon's winding to
+  // match its intended cap normal (Newell's method vs. capNormal), and
+  // triangulateCellData derives face normals purely from fan winding (no
+  // "away from center" flip). Winding is the single source of truth end to
+  // end, so cap-face triangles no longer disagree with their stored normal.
+  it('checkTriangulated reports zero violations', () => {
     expect(triangulateAndCheck(cutFixture(F1))).toEqual([]);
   });
 
