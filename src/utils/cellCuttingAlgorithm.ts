@@ -1,5 +1,5 @@
 import { BufferAttribute, BufferGeometry, Vector3 } from 'three';
-import { VoroCell } from 'voro3d';
+import type { VoroCell } from 'voro3d';
 import { CellDataInput } from '../workers/types/workerInput';
 import { CutCellData } from '../workers/types/workerOutput';
 
