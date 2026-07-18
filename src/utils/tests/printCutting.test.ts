@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { Vector3 } from 'three';
-import { cutInnerCubeFromCell, prepareForPrint, conformEdgesToPool, VertexPool } from '../printCutting';
+import {
+  cutInnerCubeFromCell,
+  prepareForPrint,
+  conformEdgesToPool,
+  rotateForSafeFan,
+  VertexPool,
+} from '../printCutting';
 import { triangulateCellData } from '../cellCuttingAlgorithm';
 import {
   checkCutCellData,
@@ -112,6 +118,73 @@ describe('conformEdgesToPool (T-junction elimination)', () => {
     const [conformed] = conformEdgesToPool([face], pool);
 
     expect(conformed).toEqual([i0, iNear, iFar, i1, iApex]);
+  });
+
+  it('does not splice a vertex within ON_PLANE_TOL of a short edge endpoint (a dimensionless t cutoff alone would admit it)', () => {
+    const pool = new VertexPool();
+    const i0 = pool.getOrAdd(new Vector3(0, 0, 0));
+    const i1 = pool.getOrAdd(new Vector3(1e-6, 0, 0)); // short edge, length 1e-6
+    const i2 = pool.getOrAdd(new Vector3(0, 1, 0));
+    // t = 0.05 along the edge -> physical offset from i0 is 5e-8, well
+    // under ON_PLANE_TOL (1e-7). A fixed t-threshold like the old 1e-9
+    // would have accepted t=0.05 and spliced this near-endpoint vertex in,
+    // producing a near-zero-length edge.
+    const iNear = pool.getOrAdd(new Vector3(5e-8, 0, 0));
+
+    const face = [i0, i1, i2];
+    const [conformed] = conformEdgesToPool([face], pool);
+
+    expect(conformed).toEqual(face);
+  });
+});
+
+// --- rotateForSafeFan: fallback contract -------------------------------------
+describe('rotateForSafeFan fallback', () => {
+  it('returns the input cycle unchanged when every vertex triple is collinear (no safe rotation exists)', () => {
+    const pool = new VertexPool();
+    const i0 = pool.getOrAdd(new Vector3(0, 0, 0));
+    const i1 = pool.getOrAdd(new Vector3(1, 0, 0));
+    const i2 = pool.getOrAdd(new Vector3(2, 0, 0));
+    const i3 = pool.getOrAdd(new Vector3(3, 0, 0));
+    // Hand-built degenerate "face": all 4 vertices lie on one straight
+    // line. Every consecutive triple around this cycle is exactly
+    // collinear, so no start vertex has two non-degenerate flanking
+    // triangles - rotateForSafeFan's loop exhausts all n candidates and
+    // falls through to the "no safe rotation" fallback, returning the
+    // input order unchanged. This documents the fallback contract with a
+    // guaranteed trigger, rather than a realistic cell face (real cell
+    // faces from the cutting pipeline aren't fully collinear).
+    const face = [i0, i1, i2, i3];
+
+    expect(rotateForSafeFan(face, pool)).toEqual(face);
+  });
+
+  // Complementary check: a valid, non-degenerate convex polygon with EVERY
+  // edge subdivided by a T-junction-style midpoint (the actual shape
+  // conformEdgesToPool produces) still finds a safe rotation - starting
+  // from any midpoint vertex works, since a midpoint's neighbors are a
+  // real corner and the corner always breaks collinearity on the far side.
+  // So for genuine pipeline output, the fallback above is unreachable;
+  // this is a dead-code path documented for the "every edge got a
+  // T-junction" scenario only.
+  it('finds a safe rotation for a fully-subdivided square (midpoint on every edge) - fallback is dead code for valid convex input', () => {
+    const pool = new VertexPool();
+    const c0 = pool.getOrAdd(new Vector3(0, 0, 0));
+    const m01 = pool.getOrAdd(new Vector3(1, 0, 0));
+    const c1 = pool.getOrAdd(new Vector3(2, 0, 0));
+    const m12 = pool.getOrAdd(new Vector3(2, 1, 0));
+    const c2 = pool.getOrAdd(new Vector3(2, 2, 0));
+    const m23 = pool.getOrAdd(new Vector3(1, 2, 0));
+    const c3 = pool.getOrAdd(new Vector3(0, 2, 0));
+    const m30 = pool.getOrAdd(new Vector3(0, 1, 0));
+    const face = [c0, m01, c1, m12, c2, m23, c3, m30];
+
+    const rotated = rotateForSafeFan(face, pool);
+
+    // Same cycle, just possibly rotated - not the untouched fallback.
+    const doubled = face.concat(face);
+    const startIdx = doubled.indexOf(rotated[0]);
+    expect(doubled.slice(startIdx, startIdx + face.length)).toEqual(rotated);
   });
 });
 

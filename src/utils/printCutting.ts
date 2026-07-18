@@ -343,12 +343,6 @@ const buildCapFaces = (
 
 // --- Edge-conformity pass (T-junction elimination) --------------------------
 
-// Bounds on the segment projection parameter t: strictly inside (0, 1),
-// with a tiny margin so a vertex that is (numerically) the endpoint itself
-// is never re-inserted as a "mid-edge" vertex.
-const T_MIN = 1e-9;
-const T_MAX = 1 - 1e-9;
-
 /**
  * Eliminate T-junctions: for every directed edge (a, b) of every face, scan
  * the whole vertex pool for OTHER vertices that lie on the open segment
@@ -385,13 +379,22 @@ export const conformEdgesToPool = (faces: number[][], pool: VertexPool): number[
       const ab = b.clone().sub(a);
       const abLenSq = ab.lengthSq();
       if (abLenSq < EPSILON * EPSILON) continue; // degenerate edge, nothing to splice in
+      const edgeLen = Math.sqrt(abLenSq);
 
       const onSegment: { idx: number; t: number }[] = [];
       for (let vi = 0; vi < nVerts; vi++) {
         if (vi === aIdx || vi === bIdx) continue;
         const v = pool.getVertex(vi);
         const t = v.clone().sub(a).dot(ab) / abLenSq;
-        if (t <= T_MIN || t >= T_MAX) continue; // not strictly between the endpoints
+        // Exclusion zone near each endpoint sized by PHYSICAL distance
+        // (ON_PLANE_TOL), not a dimensionless t-threshold: a fixed t cutoff
+        // would correspond to a sub-ON_PLANE_TOL physical distance on a
+        // short edge, letting a vertex that IS the endpoint (within
+        // tolerance) get spliced in as a distinct "mid-edge" point and
+        // create a near-zero-length edge. Equivalent to requiring
+        // t in (ON_PLANE_TOL / edgeLen, 1 - ON_PLANE_TOL / edgeLen); also
+        // naturally excludes t outside [0, 1].
+        if (t * edgeLen < ON_PLANE_TOL || (1 - t) * edgeLen < ON_PLANE_TOL) continue;
 
         const closest = a.clone().addScaledVector(ab, t);
         if (v.distanceTo(closest) < ON_PLANE_TOL) {
@@ -416,10 +419,11 @@ export const conformEdgesToPool = (faces: number[][], pool: VertexPool): number[
 
 // Threshold on |cross product| (not squared) for treating 3 points as
 // collinear. Genuine T-junction insertions from conformEdgesToPool lie on
-// their segment to floating-point precision (~1e-13), so this is a generous
-// margin above that noise floor without risking false positives on real,
-// merely-thin geometry (D5's sliver fixture has areas many orders larger).
-const FAN_COLLINEAR_TOL = 1e-9;
+// their segment to floating-point precision (~1e-13), so EPSILON (the shared
+// numeric-noise floor) is a generous margin above that without risking false
+// positives on real, merely-thin geometry (D5's sliver fixture has areas
+// many orders larger).
+const FAN_COLLINEAR_TOL = EPSILON;
 
 const isCollinearTriple = (a: Vector3, b: Vector3, c: Vector3): boolean =>
   b.clone().sub(a).cross(c.clone().sub(a)).length() < FAN_COLLINEAR_TOL;
@@ -449,7 +453,7 @@ const isCollinearTriple = (a: Vector3, b: Vector3, c: Vector3): boolean =>
  * (every edge of the face got a T-junction insertion) - unwinding that
  * would require changing triangulateCellData itself, out of scope here.
  */
-const rotateForSafeFan = (face: number[], pool: VertexPool): number[] => {
+export const rotateForSafeFan = (face: number[], pool: VertexPool): number[] => {
   const n = face.length;
   if (n < 4) return face; // triangles have no fan "wings" to worry about
 
