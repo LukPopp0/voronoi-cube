@@ -1,6 +1,6 @@
 import { Vector3 } from 'three';
 import { CutCellData } from '../workers/types/workerOutput';
-import { PLANE_TOL, ON_PLANE_TOL, KEY_PRECISION } from './geometryConstants';
+import { PLANE_TOL, ON_PLANE_TOL, KEY_PRECISION, EPSILON } from './geometryConstants';
 
 /**
  * A half-plane: normal . p <= distance defines the "inside".
@@ -110,7 +110,7 @@ const subtractCubeFromFace = (polygon: Polygon, cubePlanes: ClipPlane[]): Polygo
 
 // --- Vertex pool helper -----------------------------------------------------
 
-class VertexPool {
+export class VertexPool {
   vertices: number[] = [];
   private map = new Map<string, number>();
 
@@ -232,7 +232,25 @@ const buildCapFaces = (
     for (let pi = 0; pi < 6; pi++) {
       const d = cubePlanes[pi].normal.dot(v) - cubePlanes[pi].distance;
       if (Math.abs(d) < ON_PLANE_TOL) {
-        verticesOnPlane.get(pi)!.add(vi);
+        // A vertex on plane pi only belongs to that plane's cap if it also
+        // lies inside-or-on the cube w.r.t. every OTHER cube plane - i.e.
+        // within that face's square extent. Without this, a vertex created
+        // by clipping against an edge/corner-straddling cell face (which
+        // lies on plane pi but beyond an adjacent plane) gets swept into
+        // pi's cap polygon even though it belongs to kept solid geometry,
+        // not the cavity boundary (D1).
+        let withinFaceExtent = true;
+        for (let qi = 0; qi < 6; qi++) {
+          if (qi === pi) continue;
+          const dq = cubePlanes[qi].normal.dot(v) - cubePlanes[qi].distance;
+          if (dq > ON_PLANE_TOL) {
+            withinFaceExtent = false;
+            break;
+          }
+        }
+        if (withinFaceExtent) {
+          verticesOnPlane.get(pi)!.add(vi);
+        }
       }
     }
   }
@@ -321,6 +339,131 @@ const buildCapFaces = (
   }
 
   return capFaces;
+};
+
+// --- Edge-conformity pass (T-junction elimination) --------------------------
+
+// Bounds on the segment projection parameter t: strictly inside (0, 1),
+// with a tiny margin so a vertex that is (numerically) the endpoint itself
+// is never re-inserted as a "mid-edge" vertex.
+const T_MIN = 1e-9;
+const T_MAX = 1 - 1e-9;
+
+/**
+ * Eliminate T-junctions: for every directed edge (a, b) of every face, scan
+ * the whole vertex pool for OTHER vertices that lie on the open segment
+ * a->b (within ON_PLANE_TOL of the segment's line, strictly between the
+ * endpoints) and splice them into the edge, ordered by their position along
+ * it.
+ *
+ * Why this is needed: `subtractCubeFromFace` pushes each face's outside
+ * fragments independently, without re-visiting a face once a LATER cut (on
+ * a sibling face sharing the same physical edge) introduces a new vertex
+ * partway along that shared edge. One side of the edge ends up with a
+ * single long edge, the other with two shorter ones through the new vertex
+ * - a T-junction, which breaks directed-edge pairing (watertightness).
+ * Splicing every such vertex into every face's edges (including cap faces,
+ * whose boundaries can themselves be a T-junction's other side) makes both
+ * sides of every physical edge carry the identical vertex chain.
+ *
+ * Pure and side-effect free: returns new face arrays, does not mutate the
+ * input faces or pool.
+ */
+export const conformEdgesToPool = (faces: number[][], pool: VertexPool): number[][] => {
+  const nVerts = pool.vertices.length / 3;
+
+  return faces.map(face => {
+    const conformed: number[] = [];
+
+    for (let i = 0; i < face.length; i++) {
+      const aIdx = face[i];
+      const bIdx = face[(i + 1) % face.length];
+      conformed.push(aIdx);
+
+      const a = pool.getVertex(aIdx);
+      const b = pool.getVertex(bIdx);
+      const ab = b.clone().sub(a);
+      const abLenSq = ab.lengthSq();
+      if (abLenSq < EPSILON * EPSILON) continue; // degenerate edge, nothing to splice in
+
+      const onSegment: { idx: number; t: number }[] = [];
+      for (let vi = 0; vi < nVerts; vi++) {
+        if (vi === aIdx || vi === bIdx) continue;
+        const v = pool.getVertex(vi);
+        const t = v.clone().sub(a).dot(ab) / abLenSq;
+        if (t <= T_MIN || t >= T_MAX) continue; // not strictly between the endpoints
+
+        const closest = a.clone().addScaledVector(ab, t);
+        if (v.distanceTo(closest) < ON_PLANE_TOL) {
+          onSegment.push({ idx: vi, t });
+        }
+      }
+
+      if (onSegment.length > 0) {
+        onSegment.sort((x, y) => x.t - y.t);
+        for (const { idx } of onSegment) {
+          // Dedupe safety: skip if already adjacent to the last-pushed vertex.
+          if (conformed[conformed.length - 1] !== idx) conformed.push(idx);
+        }
+      }
+    }
+
+    return conformed;
+  });
+};
+
+// --- Fan-triangulation-safe rotation -----------------------------------------
+
+// Threshold on |cross product| (not squared) for treating 3 points as
+// collinear. Genuine T-junction insertions from conformEdgesToPool lie on
+// their segment to floating-point precision (~1e-13), so this is a generous
+// margin above that noise floor without risking false positives on real,
+// merely-thin geometry (D5's sliver fixture has areas many orders larger).
+const FAN_COLLINEAR_TOL = 1e-9;
+
+const isCollinearTriple = (a: Vector3, b: Vector3, c: Vector3): boolean =>
+  b.clone().sub(a).cross(c.clone().sub(a)).length() < FAN_COLLINEAR_TOL;
+
+/**
+ * `triangulateCellData` (cellCuttingAlgorithm.ts) fan-triangulates each face
+ * from its vertex 0, and derives that face's ENTIRE normal from vertices
+ * [0, 1, 2] alone (reused for every triangle in the fan). The edge-
+ * conformity pass above can splice a T-junction vertex directly next to a
+ * face's vertex 0 on either incident edge - by construction that spliced
+ * vertex is exactly collinear with its two flanking original vertices, so
+ * whichever fan triangle includes it (the first, using [0,1,2], or the
+ * wrap-around last one) degenerates to zero area. Worse, if it's the first
+ * triangle, the whole face's stored normal becomes the zero vector,
+ * corrupting every triangle from that face, not just one.
+ *
+ * This does not break watertightness (a degenerate triangle's edges still
+ * pair up correctly with its neighbors - checkCutCellData / directed-edge
+ * pairing is unaffected), but it does leave zero-area/zero-normal triangles
+ * in the final mesh.
+ *
+ * Fix: rotate the face's vertex-index cycle (a lossless relabeling of the
+ * same polygon - the fan of a convex polygon is invariant to which vertex
+ * is called "first" up to this collinearity concern) to a start vertex
+ * whose two incident edges are both real (not a spliced-in T-junction
+ * point). Falls back to the original order if no such rotation exists
+ * (every edge of the face got a T-junction insertion) - unwinding that
+ * would require changing triangulateCellData itself, out of scope here.
+ */
+const rotateForSafeFan = (face: number[], pool: VertexPool): number[] => {
+  const n = face.length;
+  if (n < 4) return face; // triangles have no fan "wings" to worry about
+
+  const v = face.map(i => pool.getVertex(i));
+
+  for (let s = 0; s < n; s++) {
+    const firstOk = !isCollinearTriple(v[s], v[(s + 1) % n], v[(s + 2) % n]);
+    const lastOk = !isCollinearTriple(v[(s - 2 + n) % n], v[(s - 1 + n) % n], v[s]);
+    if (firstOk && lastOk) {
+      return s === 0 ? face : face.slice(s).concat(face.slice(0, s));
+    }
+  }
+
+  return face;
 };
 
 // --- Compute cell face planes (for cube-corner-inside-cell test) ------------
@@ -413,9 +556,19 @@ export const cutInnerCubeFromCell = (
   const capFaces = buildCapFaces(pool, cubePlanes, cellPlanes);
   newFaces.push(...capFaces);
 
+  // Edge-conformity pass: with all faces (including caps) present, splice
+  // any T-junction vertices into every face's edges so shared physical
+  // edges carry an identical vertex chain on both sides (see D1 report).
+  const conformedFaces = conformEdgesToPool(newFaces, pool);
+
+  // Rotate each face's vertex-index cycle away from a fan-triangulation-
+  // unsafe start (see rotateForSafeFan) - a spliced T-junction vertex can
+  // land next to a face's vertex 0, degenerating triangulateCellData's fan.
+  const finalFaces = conformedFaces.map(face => rotateForSafeFan(face, pool));
+
   return {
     vertices: pool.vertices,
-    faces: newFaces,
+    faces: finalFaces,
     particleId: cellData.particleId,
     x: cellData.x,
     y: cellData.y,
