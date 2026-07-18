@@ -256,18 +256,16 @@ describe('D3 epsilon boundary probe', () => {
     [0.5 + delta, 0.3, 0.3],
   ];
 
-  // DEFECT D3 confirmed: at delta=1e-8 and 1e-7, the straddling face's
-  // near-plane vertices sit close enough to x=0.5 that clipping (EPSILON=1e-9)
-  // treats them as strictly outside/inside while cap collection
-  // (EPSILON*100=1e-7) and/or the corner test (EPSILON*10=1e-8) disagree,
-  // producing unpaired edges. At delta=1e-6 (safely outside all three
-  // tolerances) the geometry is clean again.
-  it.fails('delta=1e-8: checkCutCellData reports zero violations', () => {
+  // Tolerances are unified via geometryConstants.ts (PLANE_TOL / ON_PLANE_TOL):
+  // clipping, inside-cube, and cap-plane vertex collection now all classify
+  // "on which side of the plane" the same way, so delta=1e-8 and 1e-7 no
+  // longer produce unpaired edges.
+  it('delta=1e-8: checkCutCellData reports zero violations', () => {
     const box = boxWithDelta(1e-8);
     expect(checkCutCellData(cutFixture(box))).toEqual([]);
   });
 
-  it.fails('delta=1e-7: checkCutCellData reports zero violations', () => {
+  it('delta=1e-7: checkCutCellData reports zero violations', () => {
     const box = boxWithDelta(1e-7);
     expect(checkCutCellData(cutFixture(box))).toEqual([]);
   });

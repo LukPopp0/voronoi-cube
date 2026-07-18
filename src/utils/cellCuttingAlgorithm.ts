@@ -2,8 +2,7 @@ import { BufferAttribute, BufferGeometry, Vector3 } from 'three';
 import type { VoroCell } from 'voro3d';
 import { CellDataInput } from '../workers/types/workerInput';
 import { CutCellData } from '../workers/types/workerOutput';
-
-const EPSILON = 1e-9;
+import { EPSILON, PLANE_TOL, ON_PLANE_TOL, KEY_PRECISION } from './geometryConstants';
 
 /**
  * Represents a plane in 3D space using the equation: normal . p = distance
@@ -100,7 +99,7 @@ const threePlaneIntersection = (p1: Plane, p2: Plane, p3: Plane): Vector3 | null
 const isPointInsideAllPlanes = (
   point: Vector3,
   planes: Plane[],
-  tolerance: number = EPSILON,
+  tolerance: number = PLANE_TOL,
 ): boolean => {
   for (const plane of planes) {
     const signedDist = plane.normal.dot(point) - plane.distance;
@@ -222,7 +221,7 @@ export const cutCellCore = (
 
         // Step 4: Filter valid vertices
         // A vertex is valid only if it lies on the inside of all half-spaces
-        if (!isPointInsideAllPlanes(intersection, planes, EPSILON * 10)) {
+        if (!isPointInsideAllPlanes(intersection, planes, PLANE_TOL)) {
           continue;
         }
 
@@ -230,7 +229,7 @@ export const cutCellCore = (
         let isDuplicate = false;
         let existingIndex = -1;
         for (let vi = 0; vi < newVertices.length; vi++) {
-          if (newVertices[vi].distanceTo(intersection) < EPSILON * 100) {
+          if (newVertices[vi].distanceTo(intersection) < ON_PLANE_TOL) {
             isDuplicate = true;
             existingIndex = vi;
             break;
@@ -303,7 +302,7 @@ export const cutCellCore = (
   const vertexMap = new Map<string, number>();
 
   const getOrAddPoolVertex = (v: Vector3): number => {
-    const key = `${v.x.toFixed(9)}_${v.y.toFixed(9)}_${v.z.toFixed(9)}`;
+    const key = `${v.x.toFixed(KEY_PRECISION)}_${v.y.toFixed(KEY_PRECISION)}_${v.z.toFixed(KEY_PRECISION)}`;
     if (vertexMap.has(key)) return vertexMap.get(key)!;
     const idx = vertexPool.length / 3;
     vertexPool.push(v.x, v.y, v.z);

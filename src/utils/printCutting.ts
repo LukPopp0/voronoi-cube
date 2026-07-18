@@ -1,7 +1,6 @@
 import { Vector3 } from 'three';
 import { CutCellData } from '../workers/types/workerOutput';
-
-const EPSILON = 1e-9;
+import { PLANE_TOL, ON_PLANE_TOL, KEY_PRECISION } from './geometryConstants';
 
 /**
  * A half-plane: normal . p <= distance defines the "inside".
@@ -34,8 +33,8 @@ const clipPolygonByPlane = (polygon: Polygon, plane: ClipPlane): Polygon => {
     const dCurrent = plane.normal.dot(current) - plane.distance;
     const dNext = plane.normal.dot(next) - plane.distance;
 
-    const currentInside = dCurrent <= EPSILON;
-    const nextInside = dNext <= EPSILON;
+    const currentInside = dCurrent <= PLANE_TOL;
+    const nextInside = dNext <= PLANE_TOL;
 
     if (currentInside && nextInside) {
       // Both inside -> keep next
@@ -116,7 +115,7 @@ class VertexPool {
   private map = new Map<string, number>();
 
   getOrAdd(v: Vector3): number {
-    const key = `${v.x.toFixed(9)}_${v.y.toFixed(9)}_${v.z.toFixed(9)}`;
+    const key = `${v.x.toFixed(KEY_PRECISION)}_${v.y.toFixed(KEY_PRECISION)}_${v.z.toFixed(KEY_PRECISION)}`;
     const existing = this.map.get(key);
     if (existing !== undefined) return existing;
     const idx = this.vertices.length / 3;
@@ -185,7 +184,7 @@ const buildInnerCubePlanes = (
 
 const isInsideCube = (point: Vector3, cubePlanes: ClipPlane[]): boolean => {
   for (const p of cubePlanes) {
-    if (p.normal.dot(point) - p.distance > EPSILON) return false;
+    if (p.normal.dot(point) - p.distance > PLANE_TOL) return false;
   }
   return true;
 };
@@ -217,7 +216,7 @@ const buildCapFaces = (
     const v = pool.getVertex(vi);
     for (let pi = 0; pi < 6; pi++) {
       const d = cubePlanes[pi].normal.dot(v) - cubePlanes[pi].distance;
-      if (Math.abs(d) < EPSILON * 100) {
+      if (Math.abs(d) < ON_PLANE_TOL) {
         verticesOnPlane.get(pi)!.add(vi);
       }
     }
@@ -263,7 +262,7 @@ const buildCapFaces = (
     // Check if corner is inside the cell
     let insideCell = true;
     for (const cp of cellPlanes) {
-      if (cp.normal.dot(corner) - cp.distance > EPSILON * 10) {
+      if (cp.normal.dot(corner) - cp.distance > PLANE_TOL) {
         insideCell = false;
         break;
       }
