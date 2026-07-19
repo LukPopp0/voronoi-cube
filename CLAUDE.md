@@ -53,12 +53,15 @@ Must not shrink the overall cube - only faces not facing the cube exterior get c
 - **Manual plane-intersection approach (current, `cellCuttingAlgorithm.ts`)**: reduces cell size via direct plane intersections. Fast, produces near-perfect watertight geometry. Possibly still optimizable.
 
 ### Inner cube cutting
-Biggest unfinished hurdle. Currently done per-cell, only at STL download time (`src/utils/printCutting.ts` + `src/components/settings/downloadButton.tsx`). Needs investigation:
-- (a) is the approach correct / does it produce valid geometry
-- (b) is the geometry optimal
-- (c) can it be optimized (performance)
+Verified and hardened on `feature/print-preparation` (2026-07). Still done per-cell, only at STL download time (`src/utils/printCutting.ts` + `src/components/settings/downloadButton.tsx`), on the main thread. Six defects were found via an invariant test suite and fixed:
+- D1: cap faces collected vertices outside the cube-face extent (edge/corner-straddling cells) + T-junctions between fragments -> cap within-extent filter, `conformEdgesToPool` edge-conformity pass, `rotateForSafeFan`.
+- D2: cap normals flipped "away from cell center" without re-winding (inverted STL caps) -> winding is now authoritative; caps Newell-wound toward the cavity; `triangulateCellData` derives normals from winding.
+- D3: inconsistent tolerances (1e-9 vs 1e-8 vs 1e-7) -> unified in `src/utils/geometryConstants.ts` (EPSILON, PLANE_TOL=ON_PLANE_TOL=1e-7, KEY_PRECISION=7).
+- D4: cell face exactly coplanar with a cube plane got duplicated into both clip halves -> explicit "no vertex strictly beyond plane" skip in `subtractCubeFromFace`.
+- D5: needle-sliver triangles from near-tangent cuts - DOCUMENTED LIMITATION, not fixed (geometrically real, watertight, slicer-safe; elimination would need snapping/remeshing). Degenerate guards added (Newell-based face planes, area<EPSILON fragment drop).
+- D6: "all vertices outside cube" fast path was unsound (outside of a convex region is not convex) - found on real voro3d cells only -> narrowed to "all vertices beyond the SAME plane".
 
-This is the current focus (see Status below).
+Remaining (see roadmap): performance/optimality second pass, worker offload, live cut preview.
 
 ## Constraints
 - Geometry must stay watertight/manifold - non-negotiable for 3D printing.
@@ -68,16 +71,23 @@ This is the current focus (see Status below).
 ## Branching strategy
 Feature branches: `feature/<short-description>`. When starting new feature work: move to a new branch (unless told otherwise), then start in plan mode - always write a plan first for bigger features.
 
+## Testing
+Vitest (node environment, config in `vite.config.ts`, `pnpm test` / `pnpm test:watch`). Tests live in `src/utils/tests/` (NOT `__tests__`), explicit vitest imports (no globals). Key pieces:
+- `helpers/meshInvariants.ts` - reusable geometry checker (watertightness via directed-edge pairing, planarity, convexity, degenerate detection, signed volume, normal-vs-winding, `meshStats`). Use it for any future geometry work (bottom cutout!).
+- `helpers/syntheticCells.ts` - hand-built box-cell fixtures (F1-F7: concentric/face/edge/corner/inside/outside/coplanar cases).
+- `realCells.invariants.test.ts` - full-pipeline sweep on REAL voro3d cells: WASM loads fine under vitest (vite wasm plugin is inherited), cells generated live with deterministic seeds, app call pattern mirrored exactly. Suite runs in ~1s.
+- Convention: a confirmed defect gets an `it.fails` test asserting the HEALTHY expectation + `// DEFECT` comment; fixing it flips the test to plain `it`. Never weaken assertions.
+
 ## Current status / roadmap
-- Active branch `feature/print-preparation`: verify inner cube cutting correctness, check for optimization opportunities, then merge to main. This is the first part of print preparation.
+- `feature/print-preparation` DONE pending merge: inner cube cutting verified + 6 defects fixed, vitest suite added (68 tests, green). See "Inner cube cutting" above.
 - Next, on separate branches:
-  - Bottom cutout shape - always the same/uniform shape (currently a circle; consider a 6-sided pyramid instead). Add a toggle to include/exclude print prep (inner cube + bottom cutout).
+  - Bottom cutout shape - always the same/uniform shape (currently a circle; consider a 6-sided pyramid instead). Add a toggle to include/exclude print prep (inner cube + bottom cutout). Reuse `meshInvariants.ts` for verification.
   - Improve distribution algorithm and explore restrictions for better bottom cutout separation (see "Point distribution" above - goal is a consistent, minimally-intersected bottom cell).
   - Gap-creation algorithm optimization.
-  - Inner-cube-cut optimization (second pass).
-  - Repo layout / overall refactor.
+  - Inner-cube-cut optimization (second pass): performance (main-thread at download time; worker offload; live cut preview), fragmentation (subtractCubeFromFace recursion can over-fragment multi-plane faces), STL export memory (data-URL buildup in downloadButton).
+  - Repo layout / overall refactor (known duplication between printCutting.ts and cellCuttingAlgorithm.ts helpers: plane math, vertex pool, sorting).
   - UI upgrade.
-  - Add tests (none exist yet - no framework configured).
+  - ESLint 9 vs legacy `.eslintrc.cjs`: `pnpm lint` is broken repo-wide (needs flat-config migration).
 
 ## Maintaining this file
 Keep this CLAUDE.md up to date as the project evolves: update it when features are added or finished, when the roadmap changes, or when the repo layout/architecture changes. Treat it as living documentation, not a one-time snapshot.
