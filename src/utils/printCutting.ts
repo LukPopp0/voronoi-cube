@@ -187,7 +187,15 @@ const sortPolygonVertices = (vertices: Vector3[], normal: Vector3): Vector3[] =>
 
 // --- Newell's method: robust polygon normal from winding --------------------
 
-const computeNewellNormal = (polygon: Polygon): Vector3 => {
+/**
+ * Unnormalized Newell normal: sums a contribution from every edge, so unlike
+ * a single vertex-triple cross product it stays well-conditioned even when
+ * some individual triple happens to be collinear (e.g. a T-junction-spliced
+ * vertex sitting on an existing edge). Its length is 2x the polygon's area
+ * for a planar polygon, and near-zero iff the whole polygon is degenerate
+ * (collinear/coincident vertices) - useful as a degeneracy test on its own.
+ */
+const computeNewellNormalRaw = (polygon: Polygon): Vector3 => {
   const normal = new Vector3(0, 0, 0);
   const n = polygon.length;
   for (let i = 0; i < n; i++) {
@@ -197,8 +205,15 @@ const computeNewellNormal = (polygon: Polygon): Vector3 => {
     normal.y += (current.z - next.z) * (current.x + next.x);
     normal.z += (current.x - next.x) * (current.y + next.y);
   }
-  return normal.normalize();
+  return normal;
 };
+
+const computeNewellNormal = (polygon: Polygon): Vector3 =>
+  computeNewellNormalRaw(polygon).normalize();
+
+/** Polygon area from the Newell normal's magnitude (exact for planar polygons). */
+const computePolygonArea = (polygon: Polygon): number =>
+  computeNewellNormalRaw(polygon).length() / 2;
 
 // --- Build 6 inner-cube clip planes (in cell-local coordinates) ------------
 
@@ -502,20 +517,35 @@ const computeCellFacePlanes = (cellData: CutCellData): ClipPlane[] => {
   for (const face of cellData.faces) {
     if (face.length < 3) continue;
 
-    const v0 = new Vector3(verts[face[0] * 3], verts[face[0] * 3 + 1], verts[face[0] * 3 + 2]);
-    const v1 = new Vector3(verts[face[1] * 3], verts[face[1] * 3 + 1], verts[face[1] * 3 + 2]);
-    const v2 = new Vector3(verts[face[2] * 3], verts[face[2] * 3 + 1], verts[face[2] * 3 + 2]);
+    const pts = face.map(
+      idx => new Vector3(verts[idx * 3], verts[idx * 3 + 1], verts[idx * 3 + 2]),
+    );
 
-    const edge1 = v1.clone().sub(v0);
-    const edge2 = v2.clone().sub(v0);
-    const normal = edge1.cross(edge2).normalize();
+    // D5 guard: derive the normal from the WHOLE polygon via Newell's method
+    // rather than from vertices [0,1,2] alone. A single vertex triple can be
+    // collinear (e.g. the conformity pass splices a T-junction vertex right
+    // next to a face's vertex 0 - see rotateForSafeFan above for the same
+    // failure mode in triangulation), which would zero out a cross-product
+    // normal and manufacture a garbage plane. Newell sums every edge, so it
+    // stays well-conditioned unless the polygon AS A WHOLE is degenerate.
+    const rawNormal = computeNewellNormalRaw(pts);
+
+    // If the whole polygon is degenerate (near-zero Newell normal - all
+    // vertices collinear or coincident), there's no meaningful plane to
+    // derive. Skip it rather than emit a garbage (zero-normal) plane: this
+    // plane set only feeds the cube-corner-inside-cell test in
+    // buildCapFaces, where a missing constraint just makes that test
+    // slightly more permissive for corners this face would have excluded -
+    // safe, since a degenerate face has no real area to exclude a corner
+    // over in the first place.
+    if (rawNormal.lengthSq() < EPSILON * EPSILON) continue;
+
+    const normal = rawNormal.normalize();
 
     // Face center
     const center = new Vector3(0, 0, 0);
-    for (const idx of face) {
-      center.add(new Vector3(verts[idx * 3], verts[idx * 3 + 1], verts[idx * 3 + 2]));
-    }
-    center.divideScalar(face.length);
+    for (const p of pts) center.add(p);
+    center.divideScalar(pts.length);
 
     // Ensure outward-pointing (away from cell center = origin)
     if (normal.dot(center) < 0) {
@@ -573,6 +603,15 @@ export const cutInnerCubeFromCell = (
 
     for (const poly of resultPolygons) {
       if (poly.length < 3) continue;
+      // D5 guard: drop fragments that are NUMERICALLY degenerate (area below
+      // the shared EPSILON noise floor) - these cannot survive triangulation
+      // meaningfully and are clipping-precision artifacts, not real
+      // geometry. Deliberately NOT applied to merely-thin slivers (area >=
+      // EPSILON but still a needle) - those are real material from a
+      // near-tangent cut (D5 disposition: documented limitation, not a
+      // defect) and dropping them would break watertightness with
+      // neighboring faces that still expect that edge.
+      if (computePolygonArea(poly) < EPSILON) continue;
       const faceIndices = poly.map(v => pool.getOrAdd(v));
       newFaces.push(faceIndices);
     }
