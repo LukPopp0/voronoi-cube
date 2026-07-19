@@ -148,14 +148,13 @@ describe.each(INNER_CUBE_RATIOS)('prepareForPrint sweep: innerCubeRatio=%s', inn
 });
 
 describe('stats baseline (innerCubeRatio=0.85, app default)', () => {
-  // Measured baseline (see task-9-report.md for the full table): across all
-  // 6 configs (3 nPoints x 2 seeds) at the app-default innerCubeRatio=0.85,
-  // observed triangleCount per cell topped out well under this bound, and
-  // observed minAspectQuality (documented, no hard floor - see D5 in
-  // printCutting.test.ts) is recorded as a comment below after the measured
-  // run, not asserted.
-  // Measured baseline (2026-07-18, nPoints {8,30,100} x seeds {1,2} at ratio
-  // 0.85): max triangleCount per cell = 50, min minAspectQuality = 8.928e-4.
+  // Measured baseline: across all 6 configs (3 nPoints x 2 seeds) at the
+  // app-default innerCubeRatio=0.85, observed triangleCount per cell topped out
+  // well under this bound, and observed minAspectQuality (documented, no hard
+  // floor - see D5 in printCutting.test.ts) is recorded as a comment below after
+  // the measured run, not asserted. Measured (2026-07-18, nPoints {8,30,100} x
+  // seeds {1,2} at ratio 0.85): max triangleCount per cell = 50, min
+  // minAspectQuality = 8.928e-4.
   const TRIANGLE_COUNT_UPPER_BOUND = 500; // 10x margin over measured max of 50
 
   it('triangleCount stays under the documented upper bound; zero unpaired edges/duplicate vertices', () => {
@@ -189,10 +188,10 @@ describe('stats baseline (innerCubeRatio=0.85, app default)', () => {
       }
     }
 
-    // Measured baseline (documented, see task-9-report.md): max triangleCount
-    // and min minAspectQuality actually observed across the sweep at
-    // innerCubeRatio=0.85. Logged for visibility; not re-asserted beyond the
-    // loose bound above (minAspectQuality has no floor - D5 sliver limitation).
+    // Measured baseline: max triangleCount and min minAspectQuality actually
+    // observed across the sweep at innerCubeRatio=0.85. Logged for visibility;
+    // not re-asserted beyond the loose bound above (minAspectQuality has no
+    // floor - D5 sliver limitation).
     console.log(
       `[real-cell stats baseline] max triangleCount=${maxTriangleCount}, min minAspectQuality=${minAspectObserved.toExponential(3)}`,
     );

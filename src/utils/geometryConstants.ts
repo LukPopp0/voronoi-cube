@@ -36,7 +36,10 @@
  *                 vertices the tolerance considers coincident would still
  *                 hash to different keys and fail to merge. PLANE_TOL = 1e-7
  *                 implies coordinates need only agree to 7 decimal places,
- *                 so KEY_PRECISION = 7.
+ *                 so KEY_PRECISION = 7. NOTE: triangulateCellData uses its own
+ *                 coarser toFixed(6) key for render/export-side vertex dedup
+ *                 (a separate, intentional gap - not included in this tolerance
+ *                 unification).
  */
 
 /** Base numeric noise floor - for exact-zero / degeneracy checks only. */

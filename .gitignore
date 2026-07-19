@@ -25,3 +25,6 @@ dist-ssr
 
 # Graphify
 graphify-out
+
+# Claude Code session ledger
+.superpowers/

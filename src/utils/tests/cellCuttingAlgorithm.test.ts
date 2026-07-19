@@ -30,7 +30,7 @@ describe('triangulateCellData on F1 cut result (D2 probe)', () => {
   // from winding (no "away from center" flip). Stored normal and geometric
   // winding normal now agree for cap triangles as they already did for
   // original-face triangles.
-  it("reports 'normal-winding-mismatch' violations for cap faces", () => {
+  it('reports zero normal-winding-mismatch violations for cap faces (D2 fixed)', () => {
     const box = makeBoxCell([-1, -1, -1], [1, 1, 1]);
     const cut = cutInnerCubeFromCell(box, H);
     const tri = triangulateCellData(cut);
@@ -39,8 +39,8 @@ describe('triangulateCellData on F1 cut result (D2 probe)', () => {
       normals: Array.from(tri.normals),
       indices: Array.from(tri.indices),
     };
-    // Asserting the "healthy" expectation here (per NEVER-weaken-assertions
-    // convention) - it.fails documents that this currently does NOT hold.
+    // D2 (cap winding/normal mismatch) is fixed: buildCapFaces now orients
+    // cap-polygon winding to match the intended normal. Regression guard.
     expect(checkTriangulated(mesh).filter(v => v.kind === 'normal-winding-mismatch')).toEqual([]);
   });
 
