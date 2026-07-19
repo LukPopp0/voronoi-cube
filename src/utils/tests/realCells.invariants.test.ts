@@ -161,7 +161,9 @@ describe('stats baseline (innerCubeRatio=0.85, app default)', () => {
   // observed minAspectQuality (documented, no hard floor - see D5 in
   // printCutting.test.ts) is recorded as a comment below after the measured
   // run, not asserted.
-  const TRIANGLE_COUNT_UPPER_BOUND = 500; // generous margin over measured max, see report
+  // Measured baseline (2026-07-18, nPoints {8,30,100} x seeds {1,2} at ratio
+  // 0.85): max triangleCount per cell = 50, min minAspectQuality = 8.928e-4.
+  const TRIANGLE_COUNT_UPPER_BOUND = 500; // 10x margin over measured max of 50
 
   it('triangleCount stays under the documented upper bound; zero unpaired edges/duplicate vertices', () => {
     let maxTriangleCount = 0;
