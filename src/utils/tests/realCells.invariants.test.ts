@@ -44,21 +44,18 @@ const PER_CELL_VOL_TOL = 1e-4;
 // Aggregate tolerance sums per-cell slack over up to ~100 cells per config.
 const AGGREGATE_VOL_TOL = 1e-2;
 
-// DEFECT (found by this sweep, not fixed - see the dedicated regression
-// describe block below): cutInnerCubeFromCell (prepareForPrint's per-cell
-// inner-cube subtraction) produces a triangular topology hole (3 unpaired
-// directed edges with zero reverse edges - a missing cap triangle) for these
-// two specific real voro3d cells, reproducing ONLY at nPoints=100 seed=1
-// innerCubeRatio=0.5. Not reproduced at ratio 0.85/0.95, nor at nPoints
-// 8/30, nor seed=2 - and cutCellCore's raw gap-cut output for these same
-// cells is clean (see the "raw gap-cut" describe block above), so this is
-// isolated to the inner-cube-cut path, not the gap-cutting algorithm.
-// Carved out of the strict sweep below (by exact match) so the sweep stays
-// strict - and would still catch a regression - for every other cell;
-// per-cell volume bounds are NOT carved out (they hold fine for these two
-// cells too - the hole is a small missing sliver of area, not a gross
-// volume error).
-const KNOWN_DEFECT_CELLS = new Set(['100:1:0.5:87', '100:1:0.5:90']);
+// DEFECT D6 (found by this sweep, FIXED - see cutInnerCubeFromCell in
+// printCutting.ts): cutInnerCubeFromCell used to produce a triangular
+// topology hole (3 unpaired directed edges with zero reverse edges - a
+// missing cap triangle) for these two specific real voro3d cells, at
+// nPoints=100 seed=1 innerCubeRatio=0.5. Root cause: the "all vertices
+// outside the cube -> keep face unchanged" fast path kept a face's edge
+// whole even when that edge (between two outside vertices) dipped through
+// the convex inner cube's interior - unlike "all vertices inside", "all
+// vertices outside" is not itself a convex condition. Fixed by removing that
+// unsound shortcut (always routing through subtractCubeFromFace unless the
+// face is provably fully inside). No carve-out needed anymore - the sweep
+// below is fully strict for every cell.
 
 interface ConfigData {
   nPoints: number;
@@ -127,11 +124,7 @@ describe.each(INNER_CUBE_RATIOS)('prepareForPrint sweep: innerCubeRatio=%s', inn
         expect(cutVolume, cellLabel).toBeGreaterThanOrEqual(-PER_CELL_VOL_TOL);
         expect(cutVolume, cellLabel).toBeLessThanOrEqual(gapCellVolume + PER_CELL_VOL_TOL);
 
-        const isKnownDefect = KNOWN_DEFECT_CELLS.has(
-          `${cfg.nPoints}:${cfg.seed}:${innerCubeRatio}:${gapCell.particleId}`,
-        );
-
-        if (preparedCell && !isKnownDefect) {
+        if (preparedCell) {
           expect(checkCutCellData(preparedCell), cellLabel).toEqual([]);
 
           const tri = triangulateCellData(preparedCell);
@@ -206,36 +199,37 @@ describe('stats baseline (innerCubeRatio=0.85, app default)', () => {
   });
 });
 
-// --- DEFECT regression: inner-cube cut topology hole on real voro3d cells --
+// --- D6 regression: inner-cube cut topology hole on real voro3d cells ------
 //
 // Found by the sweep above at nPoints=100, seed=1, innerCubeRatio=0.5,
-// gapSize=0.5 (app default), SIZE=15. cutInnerCubeFromCell produces exactly
-// 3 unpaired directed edges forming a closed triangular cycle with zero
-// reverse edges for each - i.e. a triangular cap face that should close a
-// small hole near a cube-corner/cell-edge interaction is missing from the
-// output. Root cause not yet isolated to a specific line in
-// cutInnerCubeFromCell/buildCapFaces/conformEdgesToPool/rotateForSafeFan -
-// out of scope for this verification task (see failure protocol in the
-// task brief: capture + regress + report, not fix).
+// gapSize=0.5 (app default), SIZE=15. cutInnerCubeFromCell used to produce
+// exactly 3 unpaired directed edges forming a closed triangular cycle with
+// zero reverse edges for each - i.e. a missing triangular cap face - for
+// these two cells. Root cause: cutInnerCubeFromCell's "all vertices outside
+// the cube -> keep face unchanged" fast path is unsound - unlike "all
+// vertices inside" (sound, since the inner cube is convex), two vertices
+// both outside a convex region can still have the edge between them dip
+// through its interior. On these real (non-axis-aligned) cells, a face had
+// exactly such an edge, shared with a neighboring face that DID clip it;
+// keeping it whole here left a gap the two cap faces couldn't close. Fixed
+// by removing that shortcut in printCutting.ts (always routing through
+// subtractCubeFromFace, which handles this case correctly, unless the face
+// is provably fully inside).
 //
 // Fixtures are the post-gap-cut CutCellData (cutCellCore output, particleId
 // stamped) for particleId 87 and 90 of the nPoints=100/seed=1 sweep,
 // captured so this regression runs without the voro3d/WASM dependency.
 // Both cells' RAW gap-cut output is clean (see "raw gap-cut" describe block
-// above) - the defect is isolated to the inner-cube-cut path.
-//
-// Per repo convention (see D2 probe in cellCuttingAlgorithm.test.ts): assert
-// the CORRECT/healthy expectation, mark it.fails to document that it
-// currently does NOT hold. Never assert the broken behavior as "expected".
-describe('DEFECT regression: cutInnerCubeFromCell topology hole (found by real-cell sweep)', () => {
+// above) - the defect was isolated to the inner-cube-cut path.
+describe('D6 regression (fixed): cutInnerCubeFromCell topology hole (found by real-cell sweep)', () => {
   const INNER_HALF = (SIZE * 0.5) / 2;
 
-  it.fails('particleId 87 (nPoints=100 seed=1 ratio=0.5): checkCutCellData reports zero violations', () => {
+  it('particleId 87 (nPoints=100 seed=1 ratio=0.5): checkCutCellData reports zero violations', () => {
     const cut = cutInnerCubeFromCell(realCellFixture87 as CutCellData, INNER_HALF);
     expect(checkCutCellData(cut)).toEqual([]);
   });
 
-  it.fails('particleId 90 (nPoints=100 seed=1 ratio=0.5): checkCutCellData reports zero violations', () => {
+  it('particleId 90 (nPoints=100 seed=1 ratio=0.5): checkCutCellData reports zero violations', () => {
     const cut = cutInnerCubeFromCell(realCellFixture90 as CutCellData, INNER_HALF);
     expect(checkCutCellData(cut)).toEqual([]);
   });

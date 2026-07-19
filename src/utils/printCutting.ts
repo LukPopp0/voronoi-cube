@@ -582,19 +582,39 @@ export const cutInnerCubeFromCell = (
       idx => new Vector3(verts[idx * 3], verts[idx * 3 + 1], verts[idx * 3 + 2]),
     );
 
-    // Early return: Are all vertices outside or inside the cube?
-    const insideFlags = polygon.map(v => isInsideCube(v, cubePlanes));
-    const allOutside = insideFlags.every(f => !f);
-    const allInside = insideFlags.every(f => f);
+    // Early return, "wholly outside" case (D6 root cause fix): the ORIGINAL
+    // check here was "every vertex is outside the cube" (i.e. each vertex
+    // fails *some* plane, possibly a *different* plane per vertex) - that is
+    // UNSOUND. "Outside a convex region" is not itself a convex condition:
+    // two vertices can each individually be outside the inner cube (via
+    // different faces of it) while the straight edge between them still
+    // dips through its interior - e.g. a face wrapping around a cube
+    // edge/corner, where the cube sits "between" two of its vertices. On
+    // real (non-axis-aligned) voronoi cells this silently kept such an edge
+    // whole instead of clipping it, leaving a hole where a neighboring
+    // face's matching clip expected the edge to be split - reproduced as a
+    // missing triangular cap face (checkCutCellData: a closed 3-cycle of
+    // unpaired directed edges) on realCell-n100-seed1-particle{87,90}.json.
+    //
+    // The SOUND version requires all vertices to be beyond the SAME plane:
+    // that IS a convex (half-space) condition, so if every vertex satisfies
+    // it, every point on every edge (and the whole polygon interior) does
+    // too - "outside" this single plane -> outside the cube.
+    const wholeFaceOutsideCube = cubePlanes.some(plane =>
+      polygon.every(v => plane.normal.dot(v) - plane.distance > PLANE_TOL),
+    );
 
-    // Face is entirely outside the cube -> keep as is
-    if (allOutside) {
+    if (wholeFaceOutsideCube) {
       const faceIndices = polygon.map(v => pool.getOrAdd(v));
       newFaces.push(faceIndices);
       continue;
     }
 
-    // Face is entirely inside the cube -> discard
+    // Face is entirely inside the cube -> discard. Sound as-is: the inner
+    // cube is convex, so "every vertex inside" DOES imply "every
+    // edge/interior point inside" (a line segment between two points of a
+    // convex set stays in the set).
+    const allInside = polygon.every(v => isInsideCube(v, cubePlanes));
     if (allInside) {
       continue;
     }
