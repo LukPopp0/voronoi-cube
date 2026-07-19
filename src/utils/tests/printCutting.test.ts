@@ -336,50 +336,41 @@ const F7_COPLANAR_WITH_REMAINDER: Box = [
 ];
 
 describe('F7-supplement: coplanar +x face + single +y crossing (no edge/corner)', () => {
-  // DEFECT D4 confirmed: the box's +x face lies exactly on the cube's
-  // x=0.5 plane. Because that face itself straddles the +y plane (its own
-  // y-extent is [0.2,1.0]), it is not classified allInside/allOutside and
-  // goes through subtractCubeFromFace like any other face - producing a
-  // retained (y-clipped) remnant of that face whose vertices sit exactly
-  // on the cube's x=0.5 plane (within EPSILON*100). buildCapFaces then
-  // sweeps those SAME vertices into the +x cap-face polygon too (it scans
-  // the whole vertex pool for anything near a cube plane, regardless of
-  // origin), duplicating that face's geometry into the cap. Observed:
-  // 'degenerate-face' violations including a 2-distinct-vertex "face" and
-  // zero-length repeated-vertex edges, plus numerous 'unpaired-edge'
-  // violations - despite the net volume still being numerically correct
-  // (0.27, matching expectedVolume).
-  it.fails('checkCutCellData reports zero violations', () => {
+  // DEFECT D4, FIXED (task 7): the box's +x face lies exactly on the
+  // cube's x=0.5 plane. Because that face itself straddles the +y plane
+  // (its own y-extent is [0.2,1.0]), it does not classify as
+  // allInside/allOutside at the top level and used to go through
+  // subtractCubeFromFace's generic split like any other face. For a face
+  // EXACTLY coplanar with a cube plane, clipPolygonByPlane's inclusive
+  // "<= PLANE_TOL" test classified the whole polygon as "inside" against
+  // BOTH the plane and its flipped copy, so the generic split pushed a
+  // spurious unclipped duplicate of the whole face as "definitely outside"
+  // while the recursed insidePart ALSO kept the true (y-clipped) remnant -
+  // a duplicated, overlapping copy of the face's material.
+  //
+  // Fix: subtractCubeFromFace now detects, at each recursion level, when NO
+  // vertex of the (sub-)polygon clears PLANE_TOL strictly beyond the plane
+  // being tested (covers both full coplanarity and the related case of a
+  // polygon merely touching the plane along one edge/vertex) and skips
+  // splitting on it entirely, recursing the polygon unchanged on the
+  // remaining planes instead. Such a polygon is neither "definitely inside"
+  // nor "definitely outside" for that one plane - whether it survives is
+  // decided by the other 5 planes exactly as for any interior cross-section.
+  // No changes to buildCapFaces were needed: the existing D1
+  // within-face-extent filter already excludes the retained y>0.5 remnant's
+  // vertices from being swept into the +x cap (they fail the +y plane's
+  // extent check), so no spurious cap forms there and the cap the fixture
+  // does need - closing the y=0.5 opening - forms correctly from genuine
+  // clip vertices.
+  it('checkCutCellData reports zero violations', () => {
     expect(checkCutCellData(cutFixture(F7_COPLANAR_WITH_REMAINDER))).toEqual([]);
   });
 
-  // DEFECT D4, traced under task 6b: this used to pass (0.27) only by
-  // accident - a cancellation of two independent bugs. Root cause, confirmed
-  // by direct trace of clipPolygonByPlane: for a face EXACTLY coplanar with
-  // a cube plane, both the plane's own clip and its flipped counterpart use
-  // an inclusive "<= PLANE_TOL" test, so an on-plane polygon is classified
-  // as "inside" by BOTH - subtractCubeFromFace's outsidePart (a full,
-  // unclipped copy of the face) gets pushed to the result directly, while
-  // insidePart recurses and correctly keeps only the true (e.g. y-clipped)
-  // remnant. This yields a duplicated, overlapping copy of the face's
-  // material - a pre-existing subtractCubeFromFace defect, untouched by
-  // task 6b's cap-vertex filter or edge-conformity pass.
-  //
-  // Before task 6b's D1 cap-vertex filter, buildCapFaces' unfiltered radial
-  // sweep happened to also fold that duplicate's vertices into an
-  // oversized, wrong-shaped cap - and the resulting volume error
-  // (over-collected cap) canceled the duplicate face's spurious volume
-  // almost exactly, landing on 0.27 by luck. D1's filter (correctly)
-  // stopped that over-collection, so the cancellation no longer occurs and
-  // the duplicate's true excess volume (+0.045) is now exposed: 0.315.
-  //
-  // Confirmed NOT caused by the edge-conformity pass (task 6b Part 2): the
-  // volume is 0.315 with conformity+rotation applied, identical to task 6's
-  // measurement with ONLY the cap filter (no conformity pass) - the pass
-  // has zero effect on this fixture. Fixing the underlying duplicate-face
-  // defect belongs to D4 (subtractCubeFromFace's coplanar handling), out of
-  // this task's scope.
-  it.fails('volume matches expected (0.27) - regressed by the D1 cap fix unmasking D4', () => {
+  it('checkTriangulated reports zero violations', () => {
+    expect(triangulateAndCheck(cutFixture(F7_COPLANAR_WITH_REMAINDER))).toEqual([]);
+  });
+
+  it('volume matches expected (0.27)', () => {
     expect(polygonVolume(cutFixture(F7_COPLANAR_WITH_REMAINDER))).toBeCloseTo(
       expectedVolume(F7_COPLANAR_WITH_REMAINDER),
       6,

@@ -83,6 +83,29 @@ const subtractCubeFromFace = (polygon: Polygon, cubePlanes: ClipPlane[]): Polygo
   const plane = cubePlanes[0];
   const remaining = cubePlanes.slice(1);
 
+  // Explicit coplanar handling (D4): outsidePart only means something if
+  // the polygon actually has material STRICTLY beyond this plane. When no
+  // vertex clears PLANE_TOL past the plane - either the whole polygon is
+  // exactly coplanar with it (D4's original trigger, e.g. a cell face flush
+  // with a cube face), or it merely touches the plane along one edge/vertex
+  // while the rest sits on the inside - clipPolygonByPlane's inclusive
+  // "<= PLANE_TOL" test classifies it as "inside" against BOTH this plane
+  // AND its flipped copy (symmetric tolerance). The generic split below
+  // would then manufacture a degenerate/duplicate "outsidePart" (a full or
+  // sliver copy collapsing onto the plane) and push it as "definitely
+  // outside" while the recursed insidePart ALSO keeps the true remnant -
+  // see D4 in CLAUDE.md / task 6b's trace. Since clipPolygonByPlane against
+  // `plane` is a no-op when nothing is strictly beyond it (every vertex
+  // already satisfies the "inside" test, so the clip just returns the same
+  // polygon, cyclically rotated), skip the split entirely and recurse the
+  // untouched polygon on the remaining planes - they decide whether it
+  // survives (real surface flush with the boundary) or is swallowed (base
+  // case above, coincident with removed cavity material).
+  const maxD = Math.max(...polygon.map(v => plane.normal.dot(v) - plane.distance));
+  if (maxD <= PLANE_TOL) {
+    return subtractCubeFromFace(polygon, remaining);
+  }
+
   // "inside" this plane = normal.p <= distance (toward cube interior for this plane)
   const insidePart = clipPolygonByPlane(polygon, plane);
 
