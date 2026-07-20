@@ -55,7 +55,7 @@ export const useVoronoiStore = create<IVoronoiSettings>(set => {
     setCutInnerCube: (cutInnerCube: boolean) => set({ cutInnerCube }),
     cutBottomHole: true,
     setCutBottomHole: (cutBottomHole: boolean) => set({ cutBottomHole }),
-    bottomCutoutWidth: 0.3,
+    bottomCutoutWidth: 0.85,
     setBottomCutoutWidth: (bottomCutoutWidth: number) =>
       set({ bottomCutoutWidth: clamp(bottomCutoutWidth, 0.05, 1) }),
     bottomCutoutSides: 8,
