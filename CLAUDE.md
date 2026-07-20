@@ -23,7 +23,8 @@
 - `src/utils/randomDistributions.ts` - generates the seed points fed into `voro3d` for voronoi cell generation (see below). Not "cell centers" - just input sites for the voronoi calculation.
 - `voro3d` (`VoroCell`, `Voro3D`) - actual voronoi cell computation. Used in `src/utils/cellCuttingAlgorithm.ts`, `src/components/renderer/scene/voronoiCube.tsx`, `src/components/voronoi/Cell.tsx`, `src/hooks/useCellCuttingWorker.ts`.
 - `src/utils/cellCuttingAlgorithm.ts` - gap creation: shrinks each cell via plane intersection.
-- `src/utils/printCutting.ts` - inner-cube cut prep for printing (Sutherland-Hodgman-style polygon clipping).
+- `src/utils/printCutting.ts` - print-prep cutting (Sutherland-Hodgman-style polygon clipping), generalized to `CutRegion` (convex plane set + per-plane cap mask + region corners): `subtractRegionFromCell` with region builders `buildInnerCubeRegion` (hollow center) and `buildBottomCutoutRegion` (bottom hex-frustum feed-through; side planes through the cube center = apex-at-center taper, top plane at the cavity floor, open into the cavity or capped as a blind pocket when the inner cube is not cut).
+- `src/utils/plugGeometry.ts` - `buildBottomPlug`: solid one-piece frustum plug for the bottom cutout (inset by gapSize; equivalent to translating the pyramid apex down), exported in place in the combined STL so a full cube can be printed.
 - `src/components/settings/downloadButton.tsx` - triangulates cut cells, exports STL via three.js `STLExporter`. This is where inner-cube cutting currently gets invoked, right before download.
 - `src/hooks/useCellCuttingWorker.ts` - worker offload for cell cutting.
 - `src/` layout: `components/{settings,renderer,voronoi,geometries,header}`, `store/`, `utils/`, `hooks/`, `workers/`, `types/`, `constants/`.
@@ -36,6 +37,7 @@ Cell cutting runs off the main thread for performance. `src/hooks/useCellCutting
 - `pointDistribution` (`{ distribution, nPoints, size, seed, restriction }`) - point-gen settings, initialized from and synced back to URL query params (`?distribution=&nPoints=&seed=&restriction=`) via `setPointDistribution`, so configs are shareable via link.
 - `gapSize` - controls cell shrink amount in `cellCuttingAlgorithm.ts`.
 - `innerCubeSize` - size of the hollow center cutout.
+- `cutInnerCube`, `cutBottomHole`, `bottomCutoutWidth` - print-prep toggles + bottom-cutout base width (hexagon across-corners extent as fraction of cube size). Applied at STL download time; no URL sync (like `innerCubeSize`).
 - `explosionAmount` - visual-only cell separation for viewing/debugging, not part of print geometry.
 - `displayStyle` (`'wireframe' | 'solid'`), `darkMode`, `debug` - UI/render toggles.
 - `cutCells` (`Map<particleId, CutCellData>`) - populated incrementally by `registerCutCell` as each worker finishes; `clearCutCells` resets it on recalculation.
@@ -79,9 +81,9 @@ Vitest (node environment, config in `vite.config.ts`, `pnpm test` / `pnpm test:w
 - Convention: a confirmed defect gets an `it.fails` test asserting the HEALTHY expectation + `// DEFECT` comment; fixing it flips the test to plain `it`. Never weaken assertions.
 
 ## Current status / roadmap
-- `feature/print-preparation` DONE pending merge: inner cube cutting verified + 6 defects fixed, vitest suite added (68 tests, green). See "Inner cube cutting" above.
+- `feature/print-preparation` DONE: inner cube cutting verified + 6 defects fixed, vitest suite added (68 tests, green). See "Inner cube cutting" above.
+- `feature/bottom-cutout` DONE: hex-frustum bottom cutout (uniform regardless of seed) + separate `cutInnerCube`/`cutBottomHole` toggles + solid in-place plug (`plugGeometry.ts`). printCutting generalized to `CutRegion`; two robustness fixes found via TDD: (1) `clipPolygonByPlane` dedups consecutive output vertices (a polygon crossing a clip plane through one of its own vertices - e.g. the frustum apex - emitted that vertex twice), (2) the wholly-outside fast path is now the exact face-vs-region intersection test (the "all vertices beyond the SAME plane" check missed faces straddling several infinite tilted planes, causing needless BSP fragmentation). Suite now 90 tests incl. `bottomCutout.test.ts` (synthetic + real-cell frustum sweep + plug).
 - Next, on separate branches:
-  - Bottom cutout shape - always the same/uniform shape (currently a circle; consider a 6-sided pyramid instead). Add a toggle to include/exclude print prep (inner cube + bottom cutout). Reuse `meshInvariants.ts` for verification.
   - Improve distribution algorithm and explore restrictions for better bottom cutout separation (see "Point distribution" above - goal is a consistent, minimally-intersected bottom cell).
   - Gap-creation algorithm optimization.
   - Inner-cube-cut optimization (second pass): performance (main-thread at download time; worker offload; live cut preview), fragmentation (subtractCubeFromFace recursion can over-fragment multi-plane faces), STL export memory (data-URL buildup in downloadButton).

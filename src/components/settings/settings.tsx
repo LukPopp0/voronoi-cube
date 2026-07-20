@@ -10,6 +10,12 @@ export const Settings = () => {
   const setPointDistribution = useVoronoiStore(state => state.setPointDistribution);
   const gapSize = useVoronoiStore(state => state.gapSize);
   const setGapSize = useVoronoiStore(state => state.setGapSize);
+  const cutInnerCube = useVoronoiStore(state => state.cutInnerCube);
+  const setCutInnerCube = useVoronoiStore(state => state.setCutInnerCube);
+  const cutBottomHole = useVoronoiStore(state => state.cutBottomHole);
+  const setCutBottomHole = useVoronoiStore(state => state.setCutBottomHole);
+  const bottomCutoutWidth = useVoronoiStore(state => state.bottomCutoutWidth);
+  const setBottomCutoutWidth = useVoronoiStore(state => state.setBottomCutoutWidth);
 
   const bufferTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -113,6 +119,43 @@ export const Settings = () => {
           />
         </div>
       </div>
+      <div className="preference">
+        <label htmlFor="cutInnerCube">Cut Inner Cube</label>
+        <input
+          id="cutInnerCube"
+          name="cutInnerCube"
+          type="checkbox"
+          checked={cutInnerCube}
+          onChange={e => setCutInnerCube(e.target.checked)}
+        />
+      </div>
+      <div className="preference">
+        <label htmlFor="cutBottomHole">Bottom Cutout</label>
+        <input
+          id="cutBottomHole"
+          name="cutBottomHole"
+          type="checkbox"
+          checked={cutBottomHole}
+          onChange={e => setCutBottomHole(e.target.checked)}
+        />
+      </div>
+      {cutBottomHole && (
+        <div className="preference">
+          <label htmlFor="bottomCutoutWidth">Cutout Width</label>
+          <div>
+            <input
+              id="bottomCutoutWidth"
+              name="bottomCutoutWidth"
+              type="range"
+              min={0.05}
+              max={1}
+              step={0.05}
+              value={bottomCutoutWidth}
+              onChange={e => setBottomCutoutWidth(Number.parseFloat(e.target.value))}
+            />
+          </div>
+        </div>
+      )}
       <div>
         <DownloadButton />
       </div>

@@ -15,6 +15,12 @@ interface IVoronoiSettings {
   debug: boolean;
   setDebug: (debug: boolean) => void;
   innerCubeSize: number;
+  cutInnerCube: boolean;
+  setCutInnerCube: (cutInnerCube: boolean) => void;
+  cutBottomHole: boolean;
+  setCutBottomHole: (cutBottomHole: boolean) => void;
+  bottomCutoutWidth: number;
+  setBottomCutoutWidth: (bottomCutoutWidth: number) => void;
   darkMode: boolean;
   setDarkMode: (darkMode: boolean) => void;
   pointDistribution: IPointDistribution;
@@ -43,6 +49,13 @@ export const useVoronoiStore = create<IVoronoiSettings>(set => {
     debug: false,
     setDebug: (debug: boolean) => set({ debug }),
     innerCubeSize: 0.85,
+    cutInnerCube: true,
+    setCutInnerCube: (cutInnerCube: boolean) => set({ cutInnerCube }),
+    cutBottomHole: true,
+    setCutBottomHole: (cutBottomHole: boolean) => set({ cutBottomHole }),
+    bottomCutoutWidth: 0.3,
+    setBottomCutoutWidth: (bottomCutoutWidth: number) =>
+      set({ bottomCutoutWidth: clamp(bottomCutoutWidth, 0.05, 1) }),
     darkMode: true,
     setDarkMode: (darkMode: boolean) => set({ darkMode }),
     pointDistribution: {
