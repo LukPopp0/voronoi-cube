@@ -37,7 +37,7 @@ Cell cutting runs off the main thread for performance. `src/hooks/useCellCutting
 - `pointDistribution` (`{ distribution, nPoints, size, seed, restriction }`) - point-gen settings, initialized from and synced back to URL query params (`?distribution=&nPoints=&seed=&restriction=`) via `setPointDistribution`, so configs are shareable via link.
 - `gapSize` - controls cell shrink amount in `cellCuttingAlgorithm.ts`.
 - `innerCubeSize` - size of the hollow center cutout.
-- `cutInnerCube`, `cutBottomHole`, `bottomCutoutWidth`, `bottomCutoutSides` - print-prep toggles + bottom-cutout base width (polygon across-corners extent as fraction of cube size) + polygon side count (store-only, no UI control by design; default 6, clamped 3-16). Applied at STL download time; no URL sync (like `innerCubeSize`).
+- `cutInnerCube`, `cutBottomHole`, `bottomCutoutWidth`, `bottomCutoutSides` - print-prep toggles + bottom-cutout base width (polygon across-corners extent as fraction of cube size, default 0.85) + polygon side count (store-only, no UI control by design; default 8, clamped 3-16). Applied at STL download time; no URL sync (like `innerCubeSize`).
 - `explosionAmount` - visual-only cell separation for viewing/debugging, not part of print geometry.
 - `displayStyle` (`'wireframe' | 'solid'`), `darkMode`, `debug` - UI/render toggles.
 - `cutCells` (`Map<particleId, CutCellData>`) - populated incrementally by `registerCutCell` as each worker finishes; `clearCutCells` resets it on recalculation.
@@ -82,10 +82,12 @@ Vitest (node environment, config in `vite.config.ts`, `pnpm test` / `pnpm test:w
 
 ## Current status / roadmap
 - `feature/print-preparation` DONE: inner cube cutting verified + 6 defects fixed, vitest suite added (68 tests, green). See "Inner cube cutting" above.
-- `feature/bottom-cutout` DONE: hex-frustum bottom cutout (uniform regardless of seed) + separate `cutInnerCube`/`cutBottomHole` toggles + solid in-place plug (`plugGeometry.ts`). printCutting generalized to `CutRegion`; two robustness fixes found via TDD: (1) `clipPolygonByPlane` dedups consecutive output vertices (a polygon crossing a clip plane through one of its own vertices - e.g. the frustum apex - emitted that vertex twice), (2) the wholly-outside fast path is now the exact face-vs-region intersection test (the "all vertices beyond the SAME plane" check missed faces straddling several infinite tilted planes, causing needless BSP fragmentation). Suite now 90 tests incl. `bottomCutout.test.ts` (synthetic + real-cell frustum sweep + plug).
+- `feature/bottom-cutout` DONE (merged, PR #16): N-gon-frustum bottom cutout (side count parameterized, uniform regardless of seed) + separate `cutInnerCube`/`cutBottomHole` toggles + solid in-place plug (`plugGeometry.ts`). printCutting generalized to `CutRegion`; two robustness fixes found via TDD: (1) `clipPolygonByPlane` dedups consecutive output vertices (a polygon crossing a clip plane through one of its own vertices - e.g. the frustum apex - emitted that vertex twice), (2) the wholly-outside fast path is now the exact face-vs-region intersection test (the "all vertices beyond the SAME plane" check missed faces straddling several infinite tilted planes, causing needless BSP fragmentation). Suite now 97 tests incl. `bottomCutout.test.ts` (synthetic + real-cell frustum sweep, width-1.0 tangency, 8-sided parameterization, plug).
+  - KNOWN ISSUE: the bottom cutout sometimes leaves very small leftover chunks - cells mostly consumed by the frustum survive as tiny fragments (watertight, but useless/fragile to print and they fall loose). Candidate fix: min-volume (or min-thickness) filter in `prepareForPrint` that drops cells below a threshold after cutting.
 - Next, on separate branches:
   - Improve distribution algorithm and explore restrictions for better bottom cutout separation (see "Point distribution" above - goal is a consistent, minimally-intersected bottom cell).
   - Gap-creation algorithm optimization.
+  - Bottom-cutout small-chunk filter (see KNOWN ISSUE above).
   - Inner-cube-cut optimization (second pass): performance (main-thread at download time; worker offload; live cut preview), fragmentation (subtractCubeFromFace recursion can over-fragment multi-plane faces), STL export memory (data-URL buildup in downloadButton).
   - Repo layout / overall refactor (known duplication between printCutting.ts and cellCuttingAlgorithm.ts helpers: plane math, vertex pool, sorting).
   - UI upgrade.
