@@ -58,7 +58,7 @@ export const useVoronoiStore = create<IVoronoiSettings>(set => {
     bottomCutoutWidth: 0.3,
     setBottomCutoutWidth: (bottomCutoutWidth: number) =>
       set({ bottomCutoutWidth: clamp(bottomCutoutWidth, 0.05, 1) }),
-    bottomCutoutSides: 6,
+    bottomCutoutSides: 8,
     setBottomCutoutSides: (bottomCutoutSides: number) =>
       set({ bottomCutoutSides: clamp(Math.round(bottomCutoutSides), 3, 16) }),
     darkMode: true,
