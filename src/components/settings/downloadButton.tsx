@@ -3,6 +3,7 @@ import { BufferAttribute, BufferGeometry, Group, Mesh, MeshBasicMaterial } from 
 import { STLExporter } from 'three/examples/jsm/exporters/STLExporter';
 import { useVoronoiStore } from '../../store/store';
 import { prepareForPrint } from '../../utils/printCutting';
+import { buildBottomPlug } from '../../utils/plugGeometry';
 import { triangulateCellData } from '../../utils/cellCuttingAlgorithm';
 
 const download = (filename: string, text: string) => {
@@ -22,6 +23,11 @@ export const DownloadButton = () => {
   const cubeSize = useVoronoiStore(s => s.pointDistribution.size);
   const innerCubeSize = useVoronoiStore(s => s.innerCubeSize);
   const cutCells = useVoronoiStore(s => s.cutCells);
+  const cutInnerCube = useVoronoiStore(s => s.cutInnerCube);
+  const cutBottomHole = useVoronoiStore(s => s.cutBottomHole);
+  const bottomCutoutWidth = useVoronoiStore(s => s.bottomCutoutWidth);
+  const bottomCutoutSides = useVoronoiStore(s => s.bottomCutoutSides);
+  const gapSize = useVoronoiStore(s => s.gapSize);
 
   const downloadVoronoi = useCallback(() => {
     const cellArray = Array.from(cutCells.values());
@@ -32,7 +38,24 @@ export const DownloadButton = () => {
 
     console.log(`Processing ${cellArray.length} cells for download...`);
 
-    const printCells = prepareForPrint(cellArray, cubeSize, innerCubeSize);
+    const printCells = prepareForPrint(cellArray, cubeSize, innerCubeSize, {
+      cutInnerCube,
+      cutBottomHole,
+      bottomCutoutWidth,
+      bottomCutoutSides,
+    });
+
+    // In-place plug for the bottom cutout, so a full cube can be printed.
+    if (cutBottomHole) {
+      const plug = buildBottomPlug(
+        cubeSize,
+        innerCubeSize,
+        bottomCutoutWidth,
+        gapSize,
+        bottomCutoutSides,
+      );
+      if (plug.faces.length > 0) printCells.push(plug);
+    }
 
     const group = new Group();
     const material = new MeshBasicMaterial();
@@ -58,7 +81,16 @@ export const DownloadButton = () => {
     download('voronoi.stl', data);
 
     console.log('Download complete');
-  }, [cubeSize, innerCubeSize, cutCells]);
+  }, [
+    cubeSize,
+    innerCubeSize,
+    cutCells,
+    cutInnerCube,
+    cutBottomHole,
+    bottomCutoutWidth,
+    bottomCutoutSides,
+    gapSize,
+  ]);
 
   return <button onClick={() => downloadVoronoi()}>Download</button>;
 };

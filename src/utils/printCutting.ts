@@ -5,9 +5,29 @@ import { PLANE_TOL, ON_PLANE_TOL, KEY_PRECISION, EPSILON } from './geometryConst
 /**
  * A half-plane: normal . p <= distance defines the "inside".
  */
-interface ClipPlane {
+export interface ClipPlane {
   normal: Vector3;
   distance: number;
+}
+
+/** A vertex of a convex cut region, with the indices of the planes it lies on. */
+export interface RegionCorner {
+  position: Vector3;
+  planeIndices: number[];
+}
+
+/**
+ * A convex region to subtract from cells: intersection of half-spaces
+ * (normal . p <= distance is "inside"). `capMask[i]` controls whether cap
+ * faces are built on plane i (false = leave that boundary open, e.g. the
+ * frustum top opening into the inner cavity). `corners` are the region's
+ * vertices, used to seed cap polygons where a region corner lies inside a
+ * cell. All coordinates are CELL-LOCAL.
+ */
+export interface CutRegion {
+  planes: ClipPlane[];
+  capMask: boolean[];
+  corners: RegionCorner[];
 }
 
 // --- Polygon type used internally (arrays of Vector3) -----------------------
@@ -52,18 +72,34 @@ const clipPolygonByPlane = (polygon: Polygon, plane: ClipPlane): Polygon => {
     // Both outside -> skip
   }
 
-  return output;
+  // Drop consecutive (incl. wrap-around) duplicates: a vertex lying exactly
+  // ON the clip plane gets emitted twice - once by the "inside" case and
+  // once as the computed intersection point (t=0/t=1 lerp reproduces the
+  // endpoint). Happens whenever a polygon crosses the plane through one of
+  // its own vertices, e.g. a cell face passing through the frustum apex
+  // where all six side planes meet.
+  const deduped: Vector3[] = [];
+  for (const v of output) {
+    const prev = deduped[deduped.length - 1];
+    if (prev && prev.distanceTo(v) < EPSILON) continue;
+    deduped.push(v);
+  }
+  while (deduped.length > 1 && deduped[0].distanceTo(deduped[deduped.length - 1]) < EPSILON) {
+    deduped.pop();
+  }
+
+  return deduped;
 };
 
-// --- Recursive cube subtraction for a single face --------------------------
+// --- Recursive region subtraction for a single face --------------------------
 
 /**
- * Given a convex polygon (a cell face), subtract the inner cube defined by
- * `cubePlanes` (each plane's "inside" half-space; the cube interior is the
- * intersection of all six half-spaces).
+ * Given a convex polygon (a cell face), subtract the convex region defined by
+ * `cubePlanes` (each plane's "inside" half-space; the region interior is the
+ * intersection of all half-spaces).
  *
  * Returns an array of convex polygons that represent the parts of the face
- * that are OUTSIDE the inner cube.
+ * that are OUTSIDE the region.
  *
  * Algorithm (BSP-style recursive partition):
  *   For plane[0]:
@@ -215,15 +251,16 @@ const computeNewellNormal = (polygon: Polygon): Vector3 =>
 const computePolygonArea = (polygon: Polygon): number =>
   computeNewellNormalRaw(polygon).length() / 2;
 
-// --- Build 6 inner-cube clip planes (in cell-local coordinates) ------------
+// --- Build the inner-cube cut region (in cell-local coordinates) ------------
 
-const buildInnerCubePlanes = (
+export const buildInnerCubeRegion = (
   halfSize: number,
   cellX: number,
   cellY: number,
   cellZ: number,
-): ClipPlane[] => {
-  return [
+): CutRegion => {
+  // Plane indices: 0=+x, 1=-x, 2=+y, 3=-y, 4=+z, 5=-z
+  const planes: ClipPlane[] = [
     { normal: new Vector3(1, 0, 0), distance: halfSize - cellX },
     { normal: new Vector3(-1, 0, 0), distance: halfSize + cellX },
     { normal: new Vector3(0, 1, 0), distance: halfSize - cellY },
@@ -231,6 +268,101 @@ const buildInnerCubePlanes = (
     { normal: new Vector3(0, 0, 1), distance: halfSize - cellZ },
     { normal: new Vector3(0, 0, -1), distance: halfSize + cellZ },
   ];
+
+  // 8 cube corners, each on 3 planes.
+  const cornerPlaneSets: [number, number, number][] = [
+    [0, 2, 4],
+    [0, 2, 5],
+    [0, 3, 4],
+    [0, 3, 5],
+    [1, 2, 4],
+    [1, 2, 5],
+    [1, 3, 4],
+    [1, 3, 5],
+  ];
+
+  const corners: RegionCorner[] = cornerPlaneSets.map(([a, b, c]) => ({
+    position: new Vector3(
+      (a === 0 ? halfSize : -halfSize) - cellX,
+      (b === 2 ? halfSize : -halfSize) - cellY,
+      (c === 4 ? halfSize : -halfSize) - cellZ,
+    ),
+    planeIndices: [a, b, c],
+  }));
+
+  return { planes, capMask: planes.map(() => true), corners };
+};
+
+// --- Build the bottom-cutout (hex frustum) cut region ------------------------
+
+/**
+ * N-gon frustum for the bottom electronics feed-through, in cell-local
+ * coordinates. `sides` side planes each contain the cube center and one edge
+ * of the base polygon on the cube bottom face (apex-at-center taper); the top
+ * plane sits at the inner-cavity floor (y = -innerCubeHalf). The region is
+ * unbounded below - the cell's own bottom face clip punches the base
+ * polygon hole. Plane order contract: 0..sides-1 = sides, sides = top.
+ *
+ * `baseWidthRatio` is the base polygon's extent across corners
+ * (2 * circumradius) as a fraction of cube size. `capTop` closes the top
+ * with a cap (blind pocket, for cutting without the inner cavity); when the
+ * inner cube is also cut, leave it open so the hole connects to the cavity.
+ */
+export const buildBottomCutoutRegion = (
+  cubeSize: number,
+  innerCubeRatio: number,
+  baseWidthRatio: number,
+  capTop: boolean,
+  cellX: number,
+  cellY: number,
+  cellZ: number,
+  sides = 6,
+): CutRegion => {
+  const half = cubeSize / 2;
+  const innerHalf = (cubeSize * innerCubeRatio) / 2;
+  const circumRadius = (baseWidthRatio * cubeSize) / 2;
+  const cellPos = new Vector3(cellX, cellY, cellZ);
+
+  // Base polygon corners on the cube bottom face (world coordinates).
+  const baseCorners: Vector3[] = [];
+  for (let k = 0; k < sides; k++) {
+    const theta = (k * 2 * Math.PI) / sides;
+    baseCorners.push(
+      new Vector3(circumRadius * Math.cos(theta), -half, circumRadius * Math.sin(theta)),
+    );
+  }
+
+  const planes: ClipPlane[] = [];
+  for (let k = 0; k < sides; k++) {
+    // Side plane k through the cube center (world origin) and base edge
+    // (corner k, corner k+1); world distance is therefore 0.
+    const normal = baseCorners[k]
+      .clone()
+      .cross(baseCorners[(k + 1) % sides])
+      .normalize();
+    // Orient outward: the region interior (e.g. the base center (0,-half,0))
+    // must satisfy normal . p <= 0, i.e. normal.y > 0.
+    if (normal.y < 0) normal.negate();
+    planes.push({ normal, distance: -normal.dot(cellPos) });
+  }
+
+  // Top plane: inside the region is y <= -innerHalf (below the cavity floor).
+  const topNormal = new Vector3(0, 1, 0);
+  planes.push({ normal: topNormal, distance: -innerHalf - topNormal.dot(cellPos) });
+
+  // Top polygon corners: base corners scaled toward the apex (cube center)
+  // onto the cavity floor. Corner k lies on side planes k-1 and k + the top.
+  const scale = innerHalf / half;
+  const corners: RegionCorner[] = baseCorners.map((base, k) => ({
+    position: base.clone().multiplyScalar(scale).sub(cellPos),
+    planeIndices: [(k + sides - 1) % sides, k, sides],
+  }));
+
+  return {
+    planes,
+    capMask: [...Array<boolean>(sides).fill(true), capTop],
+    corners,
+  };
 };
 
 // --- Classify a point w.r.t. all cube planes -------------------------------
@@ -245,40 +377,45 @@ const isInsideCube = (point: Vector3, cubePlanes: ClipPlane[]): boolean => {
 // --- Build cap faces from new intersection vertices -------------------------
 
 /**
- * After clipping all faces, build cap faces on each inner-cube plane to close
- * the cell.  For each cube plane, collect all vertices that lie on it, sort
+ * After clipping all faces, build cap faces on each region plane to close
+ * the cell.  For each capped plane, collect all vertices that lie on it, sort
  * them into a polygon, and emit the face.
  *
- * We also check the 8 inner-cube corners — if a corner is inside the original
- * cell (satisfies all cell face planes), it becomes part of the cap face on
- * each of the 3 cube planes that meet at that corner.
+ * We also check the region's corners — if a corner is inside the cell
+ * (satisfies all cell face planes), it becomes part of the cap face on
+ * each of the region planes that meet at that corner. Corners on planes with
+ * capMask=false still feed adjacent capped planes' polygons (e.g. the frustum
+ * top-hexagon corners belong to the open top plane AND two capped side
+ * planes).
  */
 const buildCapFaces = (
   pool: VertexPool,
-  cubePlanes: ClipPlane[],
+  region: CutRegion,
   cellPlanes: ClipPlane[],
 ): number[][] => {
+  const { planes: cubePlanes, capMask, corners } = region;
+  const nPlanes = cubePlanes.length;
   const capFaces: number[][] = [];
 
-  // Pre-compute which vertices lie on which cube planes
+  // Pre-compute which vertices lie on which region planes
   const verticesOnPlane: Map<number, Set<number>> = new Map();
-  for (let pi = 0; pi < 6; pi++) verticesOnPlane.set(pi, new Set());
+  for (let pi = 0; pi < nPlanes; pi++) verticesOnPlane.set(pi, new Set());
 
   const nVerts = pool.vertices.length / 3;
   for (let vi = 0; vi < nVerts; vi++) {
     const v = pool.getVertex(vi);
-    for (let pi = 0; pi < 6; pi++) {
+    for (let pi = 0; pi < nPlanes; pi++) {
       const d = cubePlanes[pi].normal.dot(v) - cubePlanes[pi].distance;
       if (Math.abs(d) < ON_PLANE_TOL) {
         // A vertex on plane pi only belongs to that plane's cap if it also
-        // lies inside-or-on the cube w.r.t. every OTHER cube plane - i.e.
-        // within that face's square extent. Without this, a vertex created
+        // lies inside-or-on the region w.r.t. every OTHER region plane - i.e.
+        // within that face's extent. Without this, a vertex created
         // by clipping against an edge/corner-straddling cell face (which
         // lies on plane pi but beyond an adjacent plane) gets swept into
         // pi's cap polygon even though it belongs to kept solid geometry,
         // not the cavity boundary (D1).
         let withinFaceExtent = true;
-        for (let qi = 0; qi < 6; qi++) {
+        for (let qi = 0; qi < nPlanes; qi++) {
           if (qi === pi) continue;
           const dq = cubePlanes[qi].normal.dot(v) - cubePlanes[qi].distance;
           if (dq > ON_PLANE_TOL) {
@@ -293,44 +430,9 @@ const buildCapFaces = (
     }
   }
 
-  // Check inner-cube corners.  Each corner is the intersection of 3 axis-aligned planes.
-  // Plane indices: 0=+x, 1=-x, 2=+y, 3=-y, 4=+z, 5=-z
-  const cornerPlaneSets: [number, number, number][] = [
-    [0, 2, 4],
-    [0, 2, 5],
-    [0, 3, 4],
-    [0, 3, 5],
-    [1, 2, 4],
-    [1, 2, 5],
-    [1, 3, 4],
-    [1, 3, 5],
-  ];
-
-  for (const [a, b, c] of cornerPlaneSets) {
-    // Corner position: solve n_a . p = d_a, n_b . p = d_b, n_c . p = d_c
-    // Since normals are axis-aligned, this is trivial:
-    const corner = new Vector3();
-    // For plane with normal (+/-1,0,0): x = +/-distance
-    corner.x =
-      cubePlanes[a].normal.x !== 0
-        ? cubePlanes[a].distance * cubePlanes[a].normal.x
-        : cubePlanes[b].normal.x !== 0
-          ? cubePlanes[b].distance * cubePlanes[b].normal.x
-          : cubePlanes[c].distance * cubePlanes[c].normal.x;
-    corner.y =
-      cubePlanes[a].normal.y !== 0
-        ? cubePlanes[a].distance * cubePlanes[a].normal.y
-        : cubePlanes[b].normal.y !== 0
-          ? cubePlanes[b].distance * cubePlanes[b].normal.y
-          : cubePlanes[c].distance * cubePlanes[c].normal.y;
-    corner.z =
-      cubePlanes[a].normal.z !== 0
-        ? cubePlanes[a].distance * cubePlanes[a].normal.z
-        : cubePlanes[b].normal.z !== 0
-          ? cubePlanes[b].distance * cubePlanes[b].normal.z
-          : cubePlanes[c].distance * cubePlanes[c].normal.z;
-
-    // Check if corner is inside the cell
+  // Check region corners: a corner inside the cell seeds the cap polygons of
+  // every plane it lies on.
+  for (const { position: corner, planeIndices } of corners) {
     let insideCell = true;
     for (const cp of cellPlanes) {
       if (cp.normal.dot(corner) - cp.distance > PLANE_TOL) {
@@ -341,14 +443,15 @@ const buildCapFaces = (
 
     if (insideCell) {
       const vi = pool.getOrAdd(corner);
-      verticesOnPlane.get(a)!.add(vi);
-      verticesOnPlane.get(b)!.add(vi);
-      verticesOnPlane.get(c)!.add(vi);
+      for (const pi of planeIndices) {
+        verticesOnPlane.get(pi)!.add(vi);
+      }
     }
   }
 
-  // Build a cap face for each cube plane that has >= 3 vertices
-  for (let pi = 0; pi < 6; pi++) {
+  // Build a cap face for each capped region plane that has >= 3 vertices
+  for (let pi = 0; pi < nPlanes; pi++) {
+    if (!capMask[pi]) continue;
     const idxSet = verticesOnPlane.get(pi)!;
     if (idxSet.size < 3) continue;
 
@@ -560,14 +663,11 @@ const computeCellFacePlanes = (cellData: CutCellData): ClipPlane[] => {
 };
 
 /**
- * Cut the inner cube out of a single cell.
- * Returns a new CutCellData with the inner cube subtracted.
+ * Cut a convex region out of a single cell.
+ * Returns a new CutCellData with the region subtracted.
  */
-export const cutInnerCubeFromCell = (
-  cellData: CutCellData,
-  innerCubeHalfSize: number,
-): CutCellData => {
-  const cubePlanes = buildInnerCubePlanes(innerCubeHalfSize, cellData.x, cellData.y, cellData.z);
+export const subtractRegionFromCell = (cellData: CutCellData, region: CutRegion): CutCellData => {
+  const cubePlanes = region.planes;
 
   const pool = new VertexPool();
   const newFaces: number[][] = [];
@@ -582,29 +682,27 @@ export const cutInnerCubeFromCell = (
       idx => new Vector3(verts[idx * 3], verts[idx * 3 + 1], verts[idx * 3 + 2]),
     );
 
-    // Early return, "wholly outside" case (D6 root cause fix): the ORIGINAL
-    // check here was "every vertex is outside the cube" (i.e. each vertex
-    // fails *some* plane, possibly a *different* plane per vertex) - that is
-    // UNSOUND. "Outside a convex region" is not itself a convex condition:
-    // two vertices can each individually be outside the inner cube (via
-    // different faces of it) while the straight edge between them still
-    // dips through its interior - e.g. a face wrapping around a cube
-    // edge/corner, where the cube sits "between" two of its vertices. On
-    // real (non-axis-aligned) voronoi cells this silently kept such an edge
-    // whole instead of clipping it, leaving a hole where a neighboring
-    // face's matching clip expected the edge to be split - reproduced as a
-    // missing triangular cap face (checkCutCellData: a closed 3-cycle of
-    // unpaired directed edges) on realCell-n100-seed1-particle{87,90}.json.
+    // Early return, "wholly outside" case. History (D6): the ORIGINAL check
+    // was "every vertex is outside the region" (each vertex failing *some*
+    // plane, possibly a different one per vertex) - UNSOUND, since "outside
+    // a convex region" is not itself a convex condition (an edge between two
+    // outside vertices can still dip through the region's interior; see
+    // realCell-n100-seed1-particle{87,90}.json). The first fix required all
+    // vertices beyond the SAME plane - sound, but incomplete for regions
+    // with tilted planes (the hex frustum): a face can straddle several
+    // infinite side planes while the region itself (the intersection of ALL
+    // half-spaces) never touches it, and would get needlessly BSP-fragmented.
     //
-    // The SOUND version requires all vertices to be beyond the SAME plane:
-    // that IS a convex (half-space) condition, so if every vertex satisfies
-    // it, every point on every edge (and the whole polygon interior) does
-    // too - "outside" this single plane -> outside the cube.
-    const wholeFaceOutsideCube = cubePlanes.some(plane =>
-      polygon.every(v => plane.normal.dot(v) - plane.distance > PLANE_TOL),
-    );
-
-    if (wholeFaceOutsideCube) {
+    // The EXACT test: intersect the face with the region (Sutherland-Hodgman
+    // against every plane - exact for a convex polygon vs a convex region).
+    // If the intersection is empty or degenerate (below the area noise
+    // floor), the region removes nothing - keep the face unchanged.
+    let intersection: Polygon = polygon;
+    for (const plane of cubePlanes) {
+      intersection = clipPolygonByPlane(intersection, plane);
+      if (intersection.length < 3) break;
+    }
+    if (intersection.length < 3 || computePolygonArea(intersection) < EPSILON) {
       const faceIndices = polygon.map(v => pool.getOrAdd(v));
       newFaces.push(faceIndices);
       continue;
@@ -639,7 +737,7 @@ export const cutInnerCubeFromCell = (
 
   // Build cap faces to close the cell
   const cellPlanes = computeCellFacePlanes(cellData);
-  const capFaces = buildCapFaces(pool, cubePlanes, cellPlanes);
+  const capFaces = buildCapFaces(pool, region, cellPlanes);
   newFaces.push(...capFaces);
 
   // Edge-conformity pass: with all faces (including caps) present, splice
@@ -663,17 +761,63 @@ export const cutInnerCubeFromCell = (
 };
 
 /**
- * Process all cells: subtract the inner cube from each one.
- * Returns an array of CutCellData, one per cell, with the inner cube removed.
+ * Cut the inner cube out of a single cell.
+ * Returns a new CutCellData with the inner cube subtracted.
+ */
+export const cutInnerCubeFromCell = (
+  cellData: CutCellData,
+  innerCubeHalfSize: number,
+): CutCellData =>
+  subtractRegionFromCell(
+    cellData,
+    buildInnerCubeRegion(innerCubeHalfSize, cellData.x, cellData.y, cellData.z),
+  );
+
+export interface PrintPrepOptions {
+  cutInnerCube?: boolean;
+  cutBottomHole?: boolean;
+  bottomCutoutWidth?: number; // base polygon width across corners, fraction of cube size
+  bottomCutoutSides?: number; // side count of the cutout polygon
+}
+
+/**
+ * Process all cells: subtract the enabled print-prep regions from each one
+ * (inner cube first, then the bottom hex frustum). Defaults preserve the
+ * original inner-cube-only behavior.
  */
 export const prepareForPrint = (
   cells: CutCellData[],
   cubeSize: number,
   innerCubeRatio: number,
+  options: PrintPrepOptions = {},
 ): CutCellData[] => {
+  const {
+    cutInnerCube = true,
+    cutBottomHole = false,
+    bottomCutoutWidth = 0.3,
+    bottomCutoutSides = 6,
+  } = options;
   const innerCubeHalfSize = (cubeSize * innerCubeRatio) / 2;
 
   return cells
-    .map(cell => cutInnerCubeFromCell(cell, innerCubeHalfSize))
+    .map(cell => {
+      let result = cell;
+      if (cutInnerCube) result = cutInnerCubeFromCell(result, innerCubeHalfSize);
+      if (cutBottomHole) {
+        // Without the cavity the frustum top gets capped (blind pocket).
+        const region = buildBottomCutoutRegion(
+          cubeSize,
+          innerCubeRatio,
+          bottomCutoutWidth,
+          !cutInnerCube,
+          result.x,
+          result.y,
+          result.z,
+          bottomCutoutSides,
+        );
+        result = subtractRegionFromCell(result, region);
+      }
+      return result;
+    })
     .filter(cell => cell.faces.length > 0);
 };
