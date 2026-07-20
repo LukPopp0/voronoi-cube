@@ -21,6 +21,8 @@ interface IVoronoiSettings {
   setCutBottomHole: (cutBottomHole: boolean) => void;
   bottomCutoutWidth: number;
   setBottomCutoutWidth: (bottomCutoutWidth: number) => void;
+  bottomCutoutSides: number;
+  setBottomCutoutSides: (bottomCutoutSides: number) => void;
   darkMode: boolean;
   setDarkMode: (darkMode: boolean) => void;
   pointDistribution: IPointDistribution;
@@ -56,6 +58,9 @@ export const useVoronoiStore = create<IVoronoiSettings>(set => {
     bottomCutoutWidth: 0.3,
     setBottomCutoutWidth: (bottomCutoutWidth: number) =>
       set({ bottomCutoutWidth: clamp(bottomCutoutWidth, 0.05, 1) }),
+    bottomCutoutSides: 6,
+    setBottomCutoutSides: (bottomCutoutSides: number) =>
+      set({ bottomCutoutSides: clamp(Math.round(bottomCutoutSides), 3, 16) }),
     darkMode: true,
     setDarkMode: (darkMode: boolean) => set({ darkMode }),
     pointDistribution: {

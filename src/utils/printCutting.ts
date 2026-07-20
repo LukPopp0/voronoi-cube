@@ -296,14 +296,14 @@ export const buildInnerCubeRegion = (
 // --- Build the bottom-cutout (hex frustum) cut region ------------------------
 
 /**
- * Hex frustum for the bottom electronics feed-through, in cell-local
- * coordinates. 6 side planes each contain the cube center and one edge of
- * the base hexagon on the cube bottom face (apex-at-center taper); the top
+ * N-gon frustum for the bottom electronics feed-through, in cell-local
+ * coordinates. `sides` side planes each contain the cube center and one edge
+ * of the base polygon on the cube bottom face (apex-at-center taper); the top
  * plane sits at the inner-cavity floor (y = -innerCubeHalf). The region is
  * unbounded below - the cell's own bottom face clip punches the base
- * hexagon hole. Plane order contract: 0..5 = sides, 6 = top.
+ * polygon hole. Plane order contract: 0..sides-1 = sides, sides = top.
  *
- * `baseWidthRatio` is the base hexagon's extent across corners
+ * `baseWidthRatio` is the base polygon's extent across corners
  * (2 * circumradius) as a fraction of cube size. `capTop` closes the top
  * with a cap (blind pocket, for cutting without the inner cavity); when the
  * inner cube is also cut, leave it open so the hole connects to the cavity.
@@ -316,28 +316,29 @@ export const buildBottomCutoutRegion = (
   cellX: number,
   cellY: number,
   cellZ: number,
+  sides = 6,
 ): CutRegion => {
   const half = cubeSize / 2;
   const innerHalf = (cubeSize * innerCubeRatio) / 2;
   const circumRadius = (baseWidthRatio * cubeSize) / 2;
   const cellPos = new Vector3(cellX, cellY, cellZ);
 
-  // Base hexagon corners on the cube bottom face (world coordinates).
+  // Base polygon corners on the cube bottom face (world coordinates).
   const baseCorners: Vector3[] = [];
-  for (let k = 0; k < 6; k++) {
-    const theta = (k * Math.PI) / 3;
+  for (let k = 0; k < sides; k++) {
+    const theta = (k * 2 * Math.PI) / sides;
     baseCorners.push(
       new Vector3(circumRadius * Math.cos(theta), -half, circumRadius * Math.sin(theta)),
     );
   }
 
   const planes: ClipPlane[] = [];
-  for (let k = 0; k < 6; k++) {
+  for (let k = 0; k < sides; k++) {
     // Side plane k through the cube center (world origin) and base edge
     // (corner k, corner k+1); world distance is therefore 0.
     const normal = baseCorners[k]
       .clone()
-      .cross(baseCorners[(k + 1) % 6])
+      .cross(baseCorners[(k + 1) % sides])
       .normalize();
     // Orient outward: the region interior (e.g. the base center (0,-half,0))
     // must satisfy normal . p <= 0, i.e. normal.y > 0.
@@ -349,17 +350,17 @@ export const buildBottomCutoutRegion = (
   const topNormal = new Vector3(0, 1, 0);
   planes.push({ normal: topNormal, distance: -innerHalf - topNormal.dot(cellPos) });
 
-  // Top hexagon corners: base corners scaled toward the apex (cube center)
+  // Top polygon corners: base corners scaled toward the apex (cube center)
   // onto the cavity floor. Corner k lies on side planes k-1 and k + the top.
   const scale = innerHalf / half;
   const corners: RegionCorner[] = baseCorners.map((base, k) => ({
     position: base.clone().multiplyScalar(scale).sub(cellPos),
-    planeIndices: [(k + 5) % 6, k, 6],
+    planeIndices: [(k + sides - 1) % sides, k, sides],
   }));
 
   return {
     planes,
-    capMask: [true, true, true, true, true, true, capTop],
+    capMask: [...Array<boolean>(sides).fill(true), capTop],
     corners,
   };
 };
@@ -775,7 +776,8 @@ export const cutInnerCubeFromCell = (
 export interface PrintPrepOptions {
   cutInnerCube?: boolean;
   cutBottomHole?: boolean;
-  bottomCutoutWidth?: number; // base hexagon width across corners, fraction of cube size
+  bottomCutoutWidth?: number; // base polygon width across corners, fraction of cube size
+  bottomCutoutSides?: number; // side count of the cutout polygon
 }
 
 /**
@@ -789,7 +791,12 @@ export const prepareForPrint = (
   innerCubeRatio: number,
   options: PrintPrepOptions = {},
 ): CutCellData[] => {
-  const { cutInnerCube = true, cutBottomHole = false, bottomCutoutWidth = 0.3 } = options;
+  const {
+    cutInnerCube = true,
+    cutBottomHole = false,
+    bottomCutoutWidth = 0.3,
+    bottomCutoutSides = 6,
+  } = options;
   const innerCubeHalfSize = (cubeSize * innerCubeRatio) / 2;
 
   return cells
@@ -806,6 +813,7 @@ export const prepareForPrint = (
           result.x,
           result.y,
           result.z,
+          bottomCutoutSides,
         );
         result = subtractRegionFromCell(result, region);
       }

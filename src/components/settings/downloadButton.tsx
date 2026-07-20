@@ -26,6 +26,7 @@ export const DownloadButton = () => {
   const cutInnerCube = useVoronoiStore(s => s.cutInnerCube);
   const cutBottomHole = useVoronoiStore(s => s.cutBottomHole);
   const bottomCutoutWidth = useVoronoiStore(s => s.bottomCutoutWidth);
+  const bottomCutoutSides = useVoronoiStore(s => s.bottomCutoutSides);
   const gapSize = useVoronoiStore(s => s.gapSize);
 
   const downloadVoronoi = useCallback(() => {
@@ -41,11 +42,18 @@ export const DownloadButton = () => {
       cutInnerCube,
       cutBottomHole,
       bottomCutoutWidth,
+      bottomCutoutSides,
     });
 
     // In-place plug for the bottom cutout, so a full cube can be printed.
     if (cutBottomHole) {
-      const plug = buildBottomPlug(cubeSize, innerCubeSize, bottomCutoutWidth, gapSize);
+      const plug = buildBottomPlug(
+        cubeSize,
+        innerCubeSize,
+        bottomCutoutWidth,
+        gapSize,
+        bottomCutoutSides,
+      );
       if (plug.faces.length > 0) printCells.push(plug);
     }
 
@@ -73,7 +81,16 @@ export const DownloadButton = () => {
     download('voronoi.stl', data);
 
     console.log('Download complete');
-  }, [cubeSize, innerCubeSize, cutCells, cutInnerCube, cutBottomHole, bottomCutoutWidth, gapSize]);
+  }, [
+    cubeSize,
+    innerCubeSize,
+    cutCells,
+    cutInnerCube,
+    cutBottomHole,
+    bottomCutoutWidth,
+    bottomCutoutSides,
+    gapSize,
+  ]);
 
   return <button onClick={() => downloadVoronoi()}>Download</button>;
 };

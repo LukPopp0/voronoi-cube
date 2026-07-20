@@ -23,7 +23,7 @@
 - `src/utils/randomDistributions.ts` - generates the seed points fed into `voro3d` for voronoi cell generation (see below). Not "cell centers" - just input sites for the voronoi calculation.
 - `voro3d` (`VoroCell`, `Voro3D`) - actual voronoi cell computation. Used in `src/utils/cellCuttingAlgorithm.ts`, `src/components/renderer/scene/voronoiCube.tsx`, `src/components/voronoi/Cell.tsx`, `src/hooks/useCellCuttingWorker.ts`.
 - `src/utils/cellCuttingAlgorithm.ts` - gap creation: shrinks each cell via plane intersection.
-- `src/utils/printCutting.ts` - print-prep cutting (Sutherland-Hodgman-style polygon clipping), generalized to `CutRegion` (convex plane set + per-plane cap mask + region corners): `subtractRegionFromCell` with region builders `buildInnerCubeRegion` (hollow center) and `buildBottomCutoutRegion` (bottom hex-frustum feed-through; side planes through the cube center = apex-at-center taper, top plane at the cavity floor, open into the cavity or capped as a blind pocket when the inner cube is not cut).
+- `src/utils/printCutting.ts` - print-prep cutting (Sutherland-Hodgman-style polygon clipping), generalized to `CutRegion` (convex plane set + per-plane cap mask + region corners): `subtractRegionFromCell` with region builders `buildInnerCubeRegion` (hollow center) and `buildBottomCutoutRegion` (bottom N-gon-frustum feed-through, side count parameterized, default 6; side planes through the cube center = apex-at-center taper, top plane at the cavity floor, open into the cavity or capped as a blind pocket when the inner cube is not cut).
 - `src/utils/plugGeometry.ts` - `buildBottomPlug`: solid one-piece frustum plug for the bottom cutout (inset by gapSize; equivalent to translating the pyramid apex down), exported in place in the combined STL so a full cube can be printed.
 - `src/components/settings/downloadButton.tsx` - triangulates cut cells, exports STL via three.js `STLExporter`. This is where inner-cube cutting currently gets invoked, right before download.
 - `src/hooks/useCellCuttingWorker.ts` - worker offload for cell cutting.
@@ -37,7 +37,7 @@ Cell cutting runs off the main thread for performance. `src/hooks/useCellCutting
 - `pointDistribution` (`{ distribution, nPoints, size, seed, restriction }`) - point-gen settings, initialized from and synced back to URL query params (`?distribution=&nPoints=&seed=&restriction=`) via `setPointDistribution`, so configs are shareable via link.
 - `gapSize` - controls cell shrink amount in `cellCuttingAlgorithm.ts`.
 - `innerCubeSize` - size of the hollow center cutout.
-- `cutInnerCube`, `cutBottomHole`, `bottomCutoutWidth` - print-prep toggles + bottom-cutout base width (hexagon across-corners extent as fraction of cube size). Applied at STL download time; no URL sync (like `innerCubeSize`).
+- `cutInnerCube`, `cutBottomHole`, `bottomCutoutWidth`, `bottomCutoutSides` - print-prep toggles + bottom-cutout base width (polygon across-corners extent as fraction of cube size) + polygon side count (store-only, no UI control by design; default 6, clamped 3-16). Applied at STL download time; no URL sync (like `innerCubeSize`).
 - `explosionAmount` - visual-only cell separation for viewing/debugging, not part of print geometry.
 - `displayStyle` (`'wireframe' | 'solid'`), `darkMode`, `debug` - UI/render toggles.
 - `cutCells` (`Map<particleId, CutCellData>`) - populated incrementally by `registerCutCell` as each worker finishes; `clearCutCells` resets it on recalculation.

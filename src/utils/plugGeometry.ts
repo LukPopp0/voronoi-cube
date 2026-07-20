@@ -1,14 +1,15 @@
 import { CutCellData } from '../workers/types/workerOutput';
 
 /**
- * Solid one-piece plug for the bottom hex-frustum cutout, so a full cube
+ * Solid one-piece plug for the bottom cutout (N-gon frustum), so a full cube
  * (no electronics feed-through) can be printed. World-positioned
  * (x/y/z offsets 0), faces wound outward (CCW viewed from outside) so
- * triangulateCellData derives correct normals.
+ * triangulateCellData derives correct normals. `sides` must match the
+ * cutout region's side count.
  *
  * Clearance: the hole walls cannot shrink (they are cap faces on the exact
  * frustum planes), so the plug takes the full `gapSize` - each side plane is
- * inset inward by gapSize along its normal. Because all six side planes pass
+ * inset inward by gapSize along its normal. Because all side planes pass
  * through the frustum apex (the cube center) and share the same normal
  * y-component by symmetry, insetting them is equivalent to translating the
  * apex down by gapSize / normalY; the plug is that translated pyramid,
@@ -19,15 +20,16 @@ export const buildBottomPlug = (
   innerCubeRatio: number,
   baseWidthRatio: number,
   gapSize: number,
+  sides = 6,
 ): CutCellData => {
   const half = cubeSize / 2;
   const innerHalf = (cubeSize * innerCubeRatio) / 2;
   const circumRadius = (baseWidthRatio * cubeSize) / 2;
 
-  // Outward side-plane normal y-component (same for all 6 sides): normal of
-  // the plane through the apex (origin) and base edge (corners k, k+1).
+  // Outward side-plane normal y-component (same for all sides): normal of
+  // the plane through the apex (origin) and base edge (corners 0, 1).
   const theta0 = 0;
-  const theta1 = Math.PI / 3;
+  const theta1 = (2 * Math.PI) / sides;
   const b0 = [circumRadius * Math.cos(theta0), -half, circumRadius * Math.sin(theta0)];
   const b1 = [circumRadius * Math.cos(theta1), -half, circumRadius * Math.sin(theta1)];
   const crossX = b0[1] * b1[2] - b0[2] * b1[1];
@@ -48,26 +50,25 @@ export const buildBottomPlug = (
   }
 
   const vertices: number[] = [];
-  // Bottom ring: indices 0..5, top ring: 6..11.
+  // Bottom ring: indices 0..sides-1, top ring: sides..2*sides-1.
   for (const [s, y] of [
     [sBottom, -half],
     [sTop, -innerHalf],
   ]) {
-    for (let k = 0; k < 6; k++) {
-      const theta = (k * Math.PI) / 3;
+    for (let k = 0; k < sides; k++) {
+      const theta = (k * 2 * Math.PI) / sides;
       vertices.push(s * circumRadius * Math.cos(theta), y, s * circumRadius * Math.sin(theta));
     }
   }
 
   // Winding: the bottom ring ordered by increasing theta winds with outward
   // (-y) normal, so it is the bottom cap directly; the top cap is reversed.
-  const faces: number[][] = [
-    [0, 1, 2, 3, 4, 5],
-    [11, 10, 9, 8, 7, 6],
-  ];
-  for (let k = 0; k < 6; k++) {
-    const k1 = (k + 1) % 6;
-    faces.push([k1, k, 6 + k, 6 + k1]);
+  const bottomCap = Array.from({ length: sides }, (_, k) => k);
+  const topCap = Array.from({ length: sides }, (_, k) => 2 * sides - 1 - k);
+  const faces: number[][] = [bottomCap, topCap];
+  for (let k = 0; k < sides; k++) {
+    const k1 = (k + 1) % sides;
+    faces.push([k1, k, sides + k, sides + k1]);
   }
 
   return { vertices, faces, particleId: -1, x: 0, y: 0, z: 0 };

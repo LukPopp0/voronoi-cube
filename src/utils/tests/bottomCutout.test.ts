@@ -188,6 +188,66 @@ describe('two half cells straddling the frustum', () => {
   });
 });
 
+// --- Parameterized side count -------------------------------------------------
+// General N-gon: area = (n/2) * r^2 * sin(2*pi/n); same apex-at-center frustum.
+
+describe('parameterized side count (8-sided cutout + plug)', () => {
+  const SIDES = 8;
+  const ngonArea = (n: number, r: number): number => (n / 2) * r * r * Math.sin((2 * Math.PI) / n);
+  const ngonPyramidVol = (n: number, baseR: number, height: number): number =>
+    (ngonArea(n, baseR) * height) / 3;
+  const octFrustumVol =
+    ngonPyramidVol(SIDES, R, HALF) - ngonPyramidVol(SIDES, R * (INNER_HALF / HALF), INNER_HALF);
+
+  it('region has n+1 planes, n corners, contracted cap mask', () => {
+    const region = buildBottomCutoutRegion(CUBE, INNER_RATIO, BASE_W, false, 0, 0, 0, SIDES);
+    expect(region.planes.length).toBe(SIDES + 1);
+    expect(region.capMask).toEqual([...Array(SIDES).fill(true), false]);
+    expect(region.corners.length).toBe(SIDES);
+    for (const corner of region.corners) {
+      expect(corner.planeIndices).toContain(SIDES);
+    }
+  });
+
+  it('whole-cube cell: inner cube + 8-sided frustum, watertight and volume-correct', () => {
+    const cell = makeBoxCell(WHOLE_CUBE, WHOLE_CUBE_MAX);
+    const cavityCut = cutInnerCubeFromCell(cell, INNER_HALF);
+    const region = buildBottomCutoutRegion(
+      CUBE,
+      INNER_RATIO,
+      BASE_W,
+      false,
+      cavityCut.x,
+      cavityCut.y,
+      cavityCut.z,
+      SIDES,
+    );
+    const cut = subtractRegionFromCell(cavityCut, region);
+    expect(checkCutCellData(cut)).toEqual([]);
+    expect(triangulateAndCheck(cut)).toEqual([]);
+    expect(polygonVolume(cut)).toBeCloseTo(8 - 1 - octFrustumVol, 6);
+  });
+
+  it('8-sided plug: 2n verts, n+2 faces, gap=0 exactly fills the hole', () => {
+    const plug = buildBottomPlug(CUBE, INNER_RATIO, BASE_W, 0, SIDES);
+    expect(plug.vertices.length / 3).toBe(2 * SIDES);
+    expect(plug.faces.length).toBe(SIDES + 2);
+    expect(checkCutCellData(plug)).toEqual([]);
+    expect(triangulateAndCheck(plug)).toEqual([]);
+    expect(polygonVolume(plug)).toBeCloseTo(octFrustumVol, 9);
+  });
+
+  it('prepareForPrint passes bottomCutoutSides through', () => {
+    const [prepared] = prepareForPrint([makeBoxCell(WHOLE_CUBE, WHOLE_CUBE_MAX)], CUBE, INNER_RATIO, {
+      cutInnerCube: true,
+      cutBottomHole: true,
+      bottomCutoutWidth: BASE_W,
+      bottomCutoutSides: SIDES,
+    });
+    expect(polygonVolume(prepared)).toBeCloseTo(8 - 1 - octFrustumVol, 6);
+  });
+});
+
 // --- Max width 1.0: base hexagon inscribed in the bottom face -----------------
 // Corners touch the bottom-face edge midpoints (point tangency); top hexagon
 // corners touch the cavity-floor square edges. Both cuts must stay watertight.
