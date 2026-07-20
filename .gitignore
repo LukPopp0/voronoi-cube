@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Graphify
+graphify-out
+
+# Claude Code session ledger
+.superpowers/

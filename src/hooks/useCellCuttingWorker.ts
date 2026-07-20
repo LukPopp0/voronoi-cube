@@ -2,16 +2,18 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { BufferAttribute, BufferGeometry } from 'three';
 import { VoroCell } from 'voro3d';
 import CellCuttingWorker from '../workers/cellCuttingWorker?worker';
-import { WorkerOutput } from '../workers/types/workerOutput';
+import { CutCellData, WorkerOutput } from '../workers/types/workerOutput';
 
 interface UseCellCuttingWorkerResult {
   geometry: BufferGeometry | null;
+  cellData: CutCellData | null;
   isProcessing: boolean;
   cutCell: (
     cell: VoroCell,
     triangleIndices: number[],
     destructionParameter: number,
     cubeSize: number,
+    particleId: number,
   ) => void;
 }
 
@@ -22,13 +24,14 @@ interface UseCellCuttingWorkerResult {
 export const useCellCuttingWorker = (): UseCellCuttingWorkerResult => {
   const workerRef = useRef<Worker | null>(null);
   const [geometry, setGeometry] = useState<BufferGeometry | null>(null);
+  const [cellData, setCellData] = useState<CutCellData | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     workerRef.current = new CellCuttingWorker();
 
     workerRef.current.onmessage = (e: MessageEvent<WorkerOutput>) => {
-      const { positions, normals, indices } = e.data;
+      const { positions, normals, indices, cellData: workerCellData } = e.data;
 
       const bg = new BufferGeometry();
 
@@ -39,6 +42,7 @@ export const useCellCuttingWorker = (): UseCellCuttingWorkerResult => {
       }
 
       setGeometry(bg);
+      setCellData(workerCellData);
       setIsProcessing(false);
     };
 
@@ -54,7 +58,13 @@ export const useCellCuttingWorker = (): UseCellCuttingWorkerResult => {
   }, []);
 
   const cutCell = useCallback(
-    (cell: VoroCell, triangleIndices: number[], destructionParameter: number, cubeSize: number) => {
+    (
+      cell: VoroCell,
+      triangleIndices: number[],
+      destructionParameter: number,
+      cubeSize: number,
+      particleId: number,
+    ) => {
       if (!workerRef.current) return;
 
       setIsProcessing(true);
@@ -70,10 +80,11 @@ export const useCellCuttingWorker = (): UseCellCuttingWorkerResult => {
         triangleIndices,
         destructionParameter,
         cubeSize,
+        particleId,
       });
     },
     [],
   );
 
-  return { geometry, isProcessing, cutCell };
+  return { geometry, cellData, isProcessing, cutCell };
 };

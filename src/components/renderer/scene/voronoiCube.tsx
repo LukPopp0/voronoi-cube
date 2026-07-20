@@ -42,9 +42,9 @@ export const VoronoiCube = ({ points = [], size = 10 }: VoronoiCubeProps) => {
     const cellElements = cells.map((c, i) => (
       <Cell key={i} userData={{ particleID: c.particleID }} cell={c} />
     ));
-    // const cellElements = [
-    //   <Cell key={1} userData={{ particleID: cells[0].particleID }} cell={cells[0]} />,
-    // ];
+    // const cellElements = cells
+    //   .slice(1, 2)
+    //   .map((c, i) => <Cell key={i} userData={{ particleID: c.particleID }} cell={c} />);
     return cellElements;
   }, [points]);
 
