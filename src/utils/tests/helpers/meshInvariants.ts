@@ -413,6 +413,45 @@ export const checkTriangulated = (
   return violations;
 };
 
+/**
+ * True topological hole count: undirected edges whose forward vs reverse
+ * directed-edge counts DIFFER (fwd != rev), keyed by vertex position. A closed
+ * surface has 0 - even a balanced non-manifold edge (fwd == rev, e.g. 2/2) is
+ * NOT counted, because it still bounds a closed volume and prints fine. This is
+ * the print-relevant "is there an actual hole" metric, distinct from
+ * checkTriangulated's stricter `unpaired-edge` (fwd != 1 || rev != 1) check
+ * which also flags those balanced non-manifold edges.
+ */
+export const holeCount = (mesh: TriangulatedMesh): number => {
+  const { positions, indices } = mesh;
+  const posKey = (i: number): string => {
+    const x = positions[i * 3];
+    const y = positions[i * 3 + 1];
+    const z = positions[i * 3 + 2];
+    return `${x.toFixed(6)}_${y.toFixed(6)}_${z.toFixed(6)}`;
+  };
+  const counts = new Map<string, number>();
+  const bump = (a: string, b: string) => counts.set(`${a}|${b}`, (counts.get(`${a}|${b}`) ?? 0) + 1);
+  for (let t = 0; t < indices.length / 3; t++) {
+    const k0 = posKey(indices[t * 3]);
+    const k1 = posKey(indices[t * 3 + 1]);
+    const k2 = posKey(indices[t * 3 + 2]);
+    bump(k0, k1);
+    bump(k1, k2);
+    bump(k2, k0);
+  }
+  let holes = 0;
+  const seen = new Set<string>();
+  for (const [k, c] of counts) {
+    const [a, b] = k.split('|');
+    const rk = `${b}|${a}`;
+    if (seen.has(k) || seen.has(rk)) continue;
+    seen.add(k);
+    if (c !== (counts.get(rk) ?? 0)) holes++;
+  }
+  return holes;
+};
+
 // --- volume helpers ---------------------------------------------------------
 
 /** Signed volume of a closed triangulated mesh via the divergence theorem. */

@@ -11,30 +11,49 @@ interface IPointDistribution {
   restriction: number;
 }
 
+/**
+ * Developer / tuning values, surfaced only in the debug menu (no URL sync).
+ * Groups the guard-ring distribution knobs with the formerly UI-less print/
+ * render dev values (innerCubeSize, bottomCutoutSides, explosionAmount).
+ */
+interface IDebugSettings {
+  // Guard-ring distribution (fibonacciDistributionGuarded). Angles in radians.
+  guardCountMode: 'auto' | 'manual';
+  guardCountPct: number;
+  guardCount: number;
+  phiGMode: 'cutout' | 'density' | 'manual';
+  minPhiG: number;
+  phiG: number;
+  guardRotation: number;
+  marginFactor: number;
+  // Relocated dev knobs (previously top-level, no UI).
+  innerCubeSize: number;
+  bottomCutoutSides: number;
+  explosionAmount: number;
+}
+
 interface IVoronoiSettings {
   debug: boolean;
   setDebug: (debug: boolean) => void;
-  innerCubeSize: number;
   cutInnerCube: boolean;
   setCutInnerCube: (cutInnerCube: boolean) => void;
   cutBottomHole: boolean;
   setCutBottomHole: (cutBottomHole: boolean) => void;
   bottomCutoutWidth: number;
   setBottomCutoutWidth: (bottomCutoutWidth: number) => void;
-  bottomCutoutSides: number;
-  setBottomCutoutSides: (bottomCutoutSides: number) => void;
   darkMode: boolean;
   setDarkMode: (darkMode: boolean) => void;
   pointDistribution: IPointDistribution;
   setPointDistribution: (data: Partial<IPointDistribution>) => void;
-  explosionAmount: number;
-  setExplosionAmount: (newAmount: number) => void;
+  debugSettings: IDebugSettings;
+  setDebugSettings: (data: Partial<IDebugSettings>) => void;
   displayStyle: 'wireframe' | 'solid';
   setDisplayStyle: (displayStyle: 'wireframe' | 'solid') => void;
   gapSize: number;
   setGapSize: (gapSize: number) => void;
   cutCells: Map<number, CutCellData>;
-  registerCutCell: (cellData: CutCellData) => void;
+  cutCellsGeneration: number;
+  registerCutCell: (cellData: CutCellData, generation: number) => void;
   clearCutCells: () => void;
 }
 
@@ -50,7 +69,6 @@ export const useVoronoiStore = create<IVoronoiSettings>(set => {
   return {
     debug: false,
     setDebug: (debug: boolean) => set({ debug }),
-    innerCubeSize: 0.85,
     cutInnerCube: true,
     setCutInnerCube: (cutInnerCube: boolean) => set({ cutInnerCube }),
     cutBottomHole: true,
@@ -58,9 +76,6 @@ export const useVoronoiStore = create<IVoronoiSettings>(set => {
     bottomCutoutWidth: 0.85,
     setBottomCutoutWidth: (bottomCutoutWidth: number) =>
       set({ bottomCutoutWidth: clamp(bottomCutoutWidth, 0.05, 1) }),
-    bottomCutoutSides: 8,
-    setBottomCutoutSides: (bottomCutoutSides: number) =>
-      set({ bottomCutoutSides: clamp(Math.round(bottomCutoutSides), 3, 16) }),
     darkMode: true,
     setDarkMode: (darkMode: boolean) => set({ darkMode }),
     pointDistribution: {
@@ -88,15 +103,42 @@ export const useVoronoiStore = create<IVoronoiSettings>(set => {
           },
         };
       }),
-    explosionAmount: 1.0,
-    setExplosionAmount: (explosionAmount: number) => set({ explosionAmount }),
+    debugSettings: {
+      guardCountMode: 'auto',
+      guardCountPct: 0.25,
+      guardCount: 8,
+      phiGMode: 'cutout',
+      minPhiG: 0.15, // ~8.6 deg floor
+      phiG: Math.PI / 4, // 45 deg (manual-mode fallback value)
+      guardRotation: 0,
+      marginFactor: 0.5,
+      innerCubeSize: 0.85,
+      bottomCutoutSides: 8,
+      explosionAmount: 1.0,
+    },
+    setDebugSettings: (data: Partial<IDebugSettings>) =>
+      set(state => ({
+        ...state,
+        debugSettings: { ...state.debugSettings, ...data },
+      })),
     displayStyle: 'solid',
     setDisplayStyle: (displayStyle: 'wireframe' | 'solid') => set({ displayStyle }),
     gapSize: 0.5,
     setGapSize: (gapSize: number) => set({ gapSize: gapSize }),
     cutCells: new Map<number, CutCellData>(),
-    registerCutCell: (cellData: CutCellData) =>
+    cutCellsGeneration: 0,
+    // Cells register asynchronously as their workers finish. `generation` bumps
+    // on every recompute (see voronoiCube.tsx); a newer generation resets the
+    // map so it only ever holds the current computation's cells (no stale ghosts
+    // in the export), and stale stragglers from an older generation are ignored.
+    registerCutCell: (cellData: CutCellData, generation: number) =>
       set(state => {
+        if (generation < state.cutCellsGeneration) return {};
+        if (generation > state.cutCellsGeneration) {
+          const newMap = new Map<number, CutCellData>();
+          newMap.set(cellData.particleId, cellData);
+          return { cutCells: newMap, cutCellsGeneration: generation };
+        }
         const newMap = new Map(state.cutCells);
         newMap.set(cellData.particleId, cellData);
         return { cutCells: newMap };

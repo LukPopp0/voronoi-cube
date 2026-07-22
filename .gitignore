@@ -28,3 +28,6 @@ graphify-out
 
 # Claude Code session ledger
 .superpowers/
+
+# Playwright MCP artifacts
+.playwright-mcp

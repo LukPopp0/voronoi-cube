@@ -37,6 +37,7 @@
     font-size: 0.95rem;
     color: var(--settings-text);
     line-height: 1.2;
+    align-self: center;
   }
 
   .preference>div {
@@ -67,6 +68,21 @@
   input[type='range'] {
     width: 100%;
     accent-color: var(--settings-accent);
+  }
+
+  .debug-menu {
+    margin-top: 0.6rem;
+    border-top: 1px solid var(--settings-border);
+    padding-top: 0.4rem;
+
+    >summary {
+      cursor: pointer;
+      user-select: none;
+      font-size: 0.9rem;
+      font-weight: bold;
+      opacity: 0.75;
+      padding: 0.2rem 0;
+    }
   }
 
   button {

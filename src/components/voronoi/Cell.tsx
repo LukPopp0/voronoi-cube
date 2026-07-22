@@ -8,9 +8,10 @@ import type { ThreeElements } from '@react-three/fiber';
 
 type CellProps = {
   cell: VoroCell;
+  generation: number;
 } & ThreeElements['mesh'];
 
-export const Cell = ({ cell, ...meshProps }: CellProps) => {
+export const Cell = ({ cell, generation, ...meshProps }: CellProps) => {
   const size = useVoronoiStore(state => state.pointDistribution.size);
   const gapSize = useVoronoiStore(state => state.gapSize);
   const debug = useVoronoiStore(state => state.debug);
@@ -41,8 +42,8 @@ export const Cell = ({ cell, ...meshProps }: CellProps) => {
   }, [geometry, debug, debugStartTime]);
 
   useEffect(() => {
-    if (cellData) registerCutCell(cellData);
-  }, [cellData, registerCutCell]);
+    if (cellData) registerCutCell(cellData, generation);
+  }, [cellData, generation, registerCutCell]);
 
   return (
     <>
