@@ -4,6 +4,7 @@ import { Lighting } from './lighting';
 import { VoronoiCube } from './voronoiCube';
 import { ModelGroup } from './modelGroup';
 import { InnerCube } from './innerCube';
+import { BottomCutout } from './bottomCutout';
 import { useMemo } from 'react';
 import {
   cubeDistribution,
@@ -56,6 +57,7 @@ export const MyScene = () => {
       <ModelGroup>
         <VoronoiCube points={pointDistribution.flat()} size={size} />
         <InnerCube size={size} />
+        <BottomCutout size={size} />
       </ModelGroup>
       {debug && (
         <>

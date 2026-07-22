@@ -30,6 +30,13 @@ interface IDebugSettings {
   innerCubeSize: number;
   bottomCutoutSides: number;
   explosionAmount: number;
+  // Render the viewport cells as they will export (inner cube + bottom hole).
+  previewPrintCuts: boolean;
+  // Show/hide the emissive inner-cube light-source box.
+  showInnerCube: boolean;
+  // Show/hide the bottom-cutout frustum as a solid (only meaningful with
+  // previewPrintCuts on).
+  showBottomCutout: boolean;
 }
 
 interface IVoronoiSettings {
@@ -115,6 +122,9 @@ export const useVoronoiStore = create<IVoronoiSettings>(set => {
       innerCubeSize: 0.85,
       bottomCutoutSides: 8,
       explosionAmount: 1.0,
+      previewPrintCuts: false,
+      showInnerCube: true,
+      showBottomCutout: true,
     },
     setDebugSettings: (data: Partial<IDebugSettings>) =>
       set(state => ({

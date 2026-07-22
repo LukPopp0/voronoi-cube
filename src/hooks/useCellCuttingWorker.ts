@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { BufferAttribute, BufferGeometry } from 'three';
 import { VoroCell } from 'voro3d';
 import CellCuttingWorker from '../workers/cellCuttingWorker?worker';
+import { WorkerPreview } from '../workers/types/workerInput';
 import { CutCellData, WorkerOutput } from '../workers/types/workerOutput';
 
 interface UseCellCuttingWorkerResult {
@@ -14,6 +15,7 @@ interface UseCellCuttingWorkerResult {
     destructionParameter: number,
     cubeSize: number,
     particleId: number,
+    preview?: WorkerPreview,
   ) => void;
 }
 
@@ -64,6 +66,7 @@ export const useCellCuttingWorker = (): UseCellCuttingWorkerResult => {
       destructionParameter: number,
       cubeSize: number,
       particleId: number,
+      preview?: WorkerPreview,
     ) => {
       if (!workerRef.current) return;
 
@@ -81,6 +84,7 @@ export const useCellCuttingWorker = (): UseCellCuttingWorkerResult => {
         destructionParameter,
         cubeSize,
         particleId,
+        preview,
       });
     },
     [],
