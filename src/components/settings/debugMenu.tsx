@@ -40,6 +40,28 @@ export const DebugMenu = () => {
       </div>
 
       <div className="preference">
+        <label htmlFor="showInnerCube">Show inner cube</label>
+        <input
+          id="showInnerCube"
+          type="checkbox"
+          checked={d.showInnerCube}
+          onChange={e => set({ showInnerCube: e.target.checked })}
+        />
+      </div>
+
+      {d.previewPrintCuts && (
+        <div className="preference">
+          <label htmlFor="showBottomCutout">Show bottom cutout</label>
+          <input
+            id="showBottomCutout"
+            type="checkbox"
+            checked={d.showBottomCutout}
+            onChange={e => set({ showBottomCutout: e.target.checked })}
+          />
+        </div>
+      )}
+
+      <div className="preference">
         <label htmlFor="guardCountMode">Guard count mode</label>
         <select
           id="guardCountMode"
