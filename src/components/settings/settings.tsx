@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useVoronoiStore } from '../../store/store';
 import { DownloadButton } from './downloadButton';
+import { DebugMenu } from './debugMenu';
 import './settings.scss';
 
 const bufferTimeMs = 20;
@@ -159,6 +160,7 @@ export const Settings = () => {
       <div>
         <DownloadButton />
       </div>
+      <DebugMenu />
     </div>
   );
 };

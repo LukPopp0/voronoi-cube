@@ -21,12 +21,12 @@ const download = (filename: string, text: string) => {
 
 export const DownloadButton = () => {
   const cubeSize = useVoronoiStore(s => s.pointDistribution.size);
-  const innerCubeSize = useVoronoiStore(s => s.innerCubeSize);
+  const innerCubeSize = useVoronoiStore(s => s.debugSettings.innerCubeSize);
   const cutCells = useVoronoiStore(s => s.cutCells);
   const cutInnerCube = useVoronoiStore(s => s.cutInnerCube);
   const cutBottomHole = useVoronoiStore(s => s.cutBottomHole);
   const bottomCutoutWidth = useVoronoiStore(s => s.bottomCutoutWidth);
-  const bottomCutoutSides = useVoronoiStore(s => s.bottomCutoutSides);
+  const bottomCutoutSides = useVoronoiStore(s => s.debugSettings.bottomCutoutSides);
   const gapSize = useVoronoiStore(s => s.gapSize);
 
   const downloadVoronoi = useCallback(() => {

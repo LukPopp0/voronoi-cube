@@ -10,7 +10,7 @@ type InnerCubeProps = {
 export const InnerCube = ({ size = 10 }: InnerCubeProps) => {
   const mat = useRef<MeshStandardMaterial>(null);
   const pointLight = useRef<PointLight>(null);
-  const innerCubeSize = useVoronoiStore(s => s.innerCubeSize);
+  const innerCubeSize = useVoronoiStore(s => s.debugSettings.innerCubeSize);
   const debug = useVoronoiStore(s => s.debug);
 
   useFrame((_, delta) => {

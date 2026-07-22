@@ -1,4 +1,5 @@
 import MersenneTwister from 'mersenne-twister';
+import { clamp } from 'three/src/math/MathUtils';
 
 /**
  * Distribute points randomly on a sphere.
@@ -217,4 +218,127 @@ export const fibonacciDistributionRestricted = (
   });
   arr.unshift([0, -radius, 0]);
   return arr;
+};
+
+/**
+ * Tuning options for the guarded fibonacci distribution. All angles in radians.
+ * These live in the store's `debugSettings` slice; `cutoutWidth` is read from
+ * the top-level `bottomCutoutWidth` for the 'cutout' phiG mode.
+ */
+export interface GuardRingOptions {
+  guardCountMode: 'auto' | 'manual';
+  guardCountPct: number; // fraction of n placed in the guard ring (auto mode)
+  guardCount: number; // manual guard-ring point count
+  phiGMode: 'cutout' | 'density' | 'manual';
+  minPhiG: number; // lower clamp on the guard-ring angle
+  phiG: number; // manual guard-ring angle
+  guardRotation: number; // theta offset applied to the whole guard ring
+  marginFactor: number; // exclusion band = phiG * (1 + marginFactor)
+  cutoutWidth: number; // bottomCutoutWidth, drives the 'cutout' phiG mode
+}
+
+/** Guard-ring angle can never exceed this (keeps the ring off the equator). */
+const MAX_PHI_G = 0.45 * Math.PI;
+
+/**
+ * Guard-ring point count `G`. Auto scales with the total point count
+ * (`pct * n`), snapped to a multiple of 4 (nice cube-symmetric alignment) and
+ * clamped to `[4, n-1]`. Too few total points to form a min-4 ring => all
+ * non-pole sites become the ring.
+ */
+export const computeGuardCount = (n: number, opts: GuardRingOptions): number => {
+  if (n <= 1) return 0;
+  if (n - 1 < 4) return n - 1;
+  const raw = opts.guardCountMode === 'manual' ? opts.guardCount : opts.guardCountPct * n;
+  const snapped = Math.round(raw / 4) * 4;
+  return clamp(snapped, 4, n - 1);
+};
+
+/**
+ * Guard-ring angle up from the south pole (radians). Three modes, all clamped
+ * to `[minPhiG, MAX_PHI_G]`:
+ * - 'cutout': ring angle scales linearly with cutout width - width 1.0 -> 45 deg,
+ *   width 0.5 -> 22.5 deg, i.e. `phiG = cutoutWidth * PI/4`. Tuned by eye.
+ * - 'density': pole cap ~ one average cell's solid angle.
+ * - 'manual': use the supplied angle.
+ */
+export const computePhiG = (n: number, opts: GuardRingOptions): number => {
+  let phiG: number;
+  switch (opts.phiGMode) {
+    case 'manual':
+      phiG = opts.phiG;
+      break;
+    case 'density':
+      phiG = 2 * Math.acos(clamp(1 - 2 / n, -1, 1));
+      break;
+    case 'cutout':
+    default:
+      phiG = opts.cutoutWidth * (Math.PI / 4);
+      break;
+  }
+  return clamp(phiG, opts.minPhiG, MAX_PHI_G);
+};
+
+/**
+ * Fibonacci distribution with a deterministic guard ring around the south pole,
+ * so the bottom (pole) cell is identical for every seed.
+ *
+ * Layout (angles measured as beta = angle up from the south pole):
+ * - one fixed south-pole site at beta = 0,
+ * - `G` fixed guard sites evenly spaced at beta = phiG (seed-independent; only
+ *   `n` -> G and `guardRotation` move them),
+ * - the remaining `n-1-G` sites placed by the fibonacci spiral but compressed
+ *   into the band beta in [phiExclude, PI] (phiExclude = phiG*(1+marginFactor)),
+ *   so no random site is ever closer to the pole than the guard ring.
+ *
+ * The guard ring fully encloses the pole and every random site lies beyond the
+ * exclusion band, so the pole cell's only neighbors are the deterministic guard
+ * sites => the pole cell is seed-independent.
+ */
+export const fibonacciDistributionGuarded = (
+  n: number,
+  radius: number,
+  seed: number | undefined,
+  opts: GuardRingOptions,
+): [number, number, number][] => {
+  if (n <= 0) return [];
+
+  const points: [number, number, number][] = [];
+  points.push([0, -radius, 0]); // south pole, deterministic
+  if (n === 1) return points;
+
+  const G = computeGuardCount(n, opts);
+  const phiG = computePhiG(n, opts);
+
+  // Guard ring: deterministic, seed-independent.
+  const ringY = -radius * Math.cos(phiG);
+  const ringR = radius * Math.sin(phiG);
+  for (let k = 0; k < G; k++) {
+    const theta = (2 * Math.PI * k) / G + opts.guardRotation;
+    points.push([ringR * Math.cos(theta), ringY, ringR * Math.sin(theta)]);
+  }
+
+  // Random field, compressed above the exclusion band. Only the overall
+  // rotation depends on the seed (mirrors fibonacciDistribution).
+  const R = n - 1 - G;
+  if (R > 0) {
+    const random = new MersenneTwister(seed);
+    const randomRotation = random.random() * Math.PI * 2;
+    const goldenRatio = (1 + Math.pow(5, 0.5)) / 2;
+    const phiExclude = Math.min(phiG * (1 + opts.marginFactor), Math.PI - 1e-3);
+    const phiMax = Math.PI - phiExclude; // upper bound on spiral phi (north band)
+    for (let idx = 0; idx < R; idx++) {
+      const i = idx + 0.5;
+      let phi = Math.acos(1 - (2 * i) / R);
+      phi = mapNumRange(phi, 0, Math.PI, 0, phiMax);
+      const theta = (2 * Math.PI * i) / goldenRatio + randomRotation;
+      points.push([
+        radius * Math.cos(theta) * Math.sin(phi),
+        radius * Math.cos(phi),
+        radius * Math.sin(theta) * Math.sin(phi),
+      ]);
+    }
+  }
+
+  return points;
 };

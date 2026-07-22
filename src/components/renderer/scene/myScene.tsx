@@ -7,8 +7,9 @@ import { InnerCube } from './innerCube';
 import { useMemo } from 'react';
 import {
   cubeDistribution,
-  fibonacciDistributionRestricted,
+  fibonacciDistributionGuarded,
   sphereDistributionRestricted,
+  type GuardRingOptions,
 } from '../../../utils/randomDistributions';
 import { BufferGeomPoints } from '../../geometries/bufferGeomPoints';
 
@@ -17,20 +18,36 @@ export const MyScene = () => {
     state => state.pointDistribution
   );
   const debug = useVoronoiStore(state => state.debug);
+  const debugSettings = useVoronoiStore(state => state.debugSettings);
+  const bottomCutoutWidth = useVoronoiStore(state => state.bottomCutoutWidth);
 
   const pointDistribution = useMemo(() => {
     if (nPoints < 2) return [[0, 0, 0]];
     const s = size - 0.0001;
     switch (distribution) {
-      case 'fibonacci':
-        return cubeDistribution(nPoints, s, seed + nPoints, fibonacciDistributionRestricted);
+      case 'fibonacci': {
+        const guardOpts: GuardRingOptions = {
+          guardCountMode: debugSettings.guardCountMode,
+          guardCountPct: debugSettings.guardCountPct,
+          guardCount: debugSettings.guardCount,
+          phiGMode: debugSettings.phiGMode,
+          minPhiG: debugSettings.minPhiG,
+          phiG: debugSettings.phiG,
+          guardRotation: debugSettings.guardRotation,
+          marginFactor: debugSettings.marginFactor,
+          cutoutWidth: bottomCutoutWidth,
+        };
+        return cubeDistribution(nPoints, s, seed + nPoints, fibonacciDistributionGuarded, [
+          guardOpts,
+        ]);
+      }
       case 'simple':
         return cubeDistribution(nPoints, s, seed + nPoints, sphereDistributionRestricted, [
           restriction,
         ]);
     }
     return [];
-  }, [nPoints, distribution, size, seed, restriction]);
+  }, [nPoints, distribution, size, seed, restriction, debugSettings, bottomCutoutWidth]);
 
   return (
     <>
