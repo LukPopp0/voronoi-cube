@@ -169,12 +169,26 @@ const subtractCubeFromFace = (polygon: Polygon, cubePlanes: ClipPlane[]): Polygo
 
 // --- Vertex pool helper -----------------------------------------------------
 
+/**
+ * Rounded coordinate string for vertex-dedup keys, with IEEE negative zero
+ * collapsed to positive zero. Clipping a face through the frustum apex/axis
+ * (where the side planes all meet at a coordinate of ~0) can yield a component
+ * of -0; `(-0).toFixed(n)` is "-0.000..." which would hash DIFFERENTLY from
+ * "0.000...", splitting a single apex vertex into two pool entries and leaving
+ * unpaired edges (holes) exactly at that plane. Normalizing the sign of zero
+ * merges them.
+ */
+const coordKey = (n: number): string => {
+  const s = n.toFixed(KEY_PRECISION);
+  return s[0] === '-' && Number(s) === 0 ? s.slice(1) : s;
+};
+
 export class VertexPool {
   vertices: number[] = [];
   private map = new Map<string, number>();
 
   getOrAdd(v: Vector3): number {
-    const key = `${v.x.toFixed(KEY_PRECISION)}_${v.y.toFixed(KEY_PRECISION)}_${v.z.toFixed(KEY_PRECISION)}`;
+    const key = `${coordKey(v.x)}_${coordKey(v.y)}_${coordKey(v.z)}`;
     const existing = this.map.get(key);
     if (existing !== undefined) return existing;
     const idx = this.vertices.length / 3;

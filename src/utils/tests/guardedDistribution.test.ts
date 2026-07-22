@@ -162,14 +162,11 @@ describe('guard ring borders the pole cell for every seed (voro3d)', () => {
   }, 60000);
 });
 
-// Watertightness is non-negotiable for printing. This asserts manifoldness in
-// the CLEAN regime only: MANUAL ring angle 45 deg (>= ~43 deg threshold), width
-// 0.85. WARNING: the DEFAULT 'cutout' mode is NOT clean here - it maps width
-// 0.85 -> ~38 deg, and below ~43 deg the bottom cut leaves REAL holes (missing
-// caps, directed-edge imbalance fwd != rev) on ~2-4 cells per export, on every
-// seed incl. the app default (n=18, seed 1). Pre-existing bottom-cut limitation
-// (roadmap). So this test pins manual 45 deg deliberately; do not "simplify" it
-// to the default cutout mapping or it will (correctly) fail.
+// Watertightness is non-negotiable for printing. Asserts manifoldness at a
+// representative config (ring 45 deg, width 0.85). Low ring angles - which the
+// default 'cutout' mapping produces for narrow cutouts - are covered by the
+// low-angle hole test above (~30-45 deg, both cuts); all watertight since the
+// negative-zero vertex-key fix in printCutting.ts.
 describe('watertight after print cuts in the safe regime (voro3d)', () => {
   const opts = makeOpts({ phiG: Math.PI / 4, cutoutWidth: 0.85 });
 
@@ -207,24 +204,20 @@ describe('watertight after print cuts in the safe regime (voro3d)', () => {
   }, 60000);
 });
 
-// DEFECT: at low guard-ring angles the bottom cut leaves genuine holes (missing
-// caps) - real topological holes (directed-edge imbalance), verified on all
-// seeds incl. the app default. The HEALTHY expectation is zero holes at any ring
-// angle.
-//
-// Root cause (investigated): the holes appear ONLY when BOTH cuts run (inner-
-// cube-only and bottom-only are each clean). They sit exactly at world
-// y = -innerCubeHalf (~-6.375), where the inner-cube CAVITY FLOOR plane and the
-// bottom-frustum TOP plane are COINCIDENT. prepareForPrint cuts sequentially
-// (inner cube first): the inner-cube cut caps that plane over the cell's full
-// cross-section, then the frustum cut removes the frustum footprint from below
-// but does not correctly re-trim / re-cap that coincident plane (capTop=false
-// leaves it open -> holes; capTop=true double-caps it -> worse). Order-swap and
-// a final conformEdgesToPool pass do NOT help (the faces are genuinely missing,
-// not T-junctions). Fix belongs in printCutting.ts's handling of a region plane
-// coincident with a prior cut's cap plane (D4 family). Flip to `it` once fixed.
+// FIXED (negative-zero vertex-key collision): at low guard-ring angles the
+// bottom cut used to leave genuine holes (directed-edge imbalance) on all seeds
+// incl. the app default. Holes only appeared when BOTH cuts ran, at world
+// y = -innerCubeHalf (the inner-cube cavity floor / frustum top). Root cause was
+// NOT the coincident plane per se: clipping a face through the frustum apex/axis
+// (side planes meet at coordinate ~0) yields a component of IEEE -0, and
+// VertexPool keyed vertices with toFixed(7) - "-0.0000000" != "0.0000000" - so a
+// single apex vertex split into two pool entries, leaving unpaired edges exactly
+// there. Symmetric geometry (the full-cube box fixture) produced consistent +0
+// and stayed clean, which is why it manifested only on irregular voro3d cells.
+// Fixed by normalizing the sign of zero in VertexPool's coordinate key
+// (printCutting.ts `coordKey`).
 describe('bottom cut leaves no real holes at low ring angles (voro3d)', () => {
-  it.fails('n=18 width 0.85 ring ~30-38 deg: every exported cell has zero holes', async () => {
+  it('n=18 width 0.85 ring ~30-38 deg: every exported cell has zero holes', async () => {
     for (const phiG of [0.55, 0.67]) {
       // ~31.5 deg, ~38.4 deg
       const opts = makeOpts({ phiG, cutoutWidth: 0.85 });
