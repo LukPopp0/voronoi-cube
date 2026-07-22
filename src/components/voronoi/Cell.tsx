@@ -16,6 +16,12 @@ export const Cell = ({ cell, generation, ...meshProps }: CellProps) => {
   const gapSize = useVoronoiStore(state => state.gapSize);
   const debug = useVoronoiStore(state => state.debug);
   const registerCutCell = useVoronoiStore(state => state.registerCutCell);
+  const cutInnerCube = useVoronoiStore(state => state.cutInnerCube);
+  const cutBottomHole = useVoronoiStore(state => state.cutBottomHole);
+  const bottomCutoutWidth = useVoronoiStore(state => state.bottomCutoutWidth);
+  const previewPrintCuts = useVoronoiStore(state => state.debugSettings.previewPrintCuts);
+  const innerCubeSize = useVoronoiStore(state => state.debugSettings.innerCubeSize);
+  const bottomCutoutSides = useVoronoiStore(state => state.debugSettings.bottomCutoutSides);
   const meshRef = useRef<Mesh>(null);
   const [debugStartTime, setDebugStartTime] = useState<number>(-1);
 
@@ -23,10 +29,35 @@ export const Cell = ({ cell, generation, ...meshProps }: CellProps) => {
 
   const triangleIndices = useMemo(() => cell.faces.map(polygonToTriangles), [cell.faces]);
 
+  const preview = previewPrintCuts
+    ? {
+        cutInnerCube,
+        cutBottomHole,
+        innerCubeRatio: innerCubeSize,
+        bottomCutoutWidth,
+        bottomCutoutSides,
+      }
+    : undefined;
+
   useEffect(() => {
     setDebugStartTime(window.performance.now());
-    cutCell(cell, triangleIndices.flat().flat(), gapSize, size, cell.particleID);
-  }, [cell, triangleIndices, gapSize, size, cutCell, debug]);
+    cutCell(cell, triangleIndices.flat().flat(), gapSize, size, cell.particleID, preview);
+    // preview is a fresh object each render; its fields drive re-cutting.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    cell,
+    triangleIndices,
+    gapSize,
+    size,
+    cutCell,
+    debug,
+    previewPrintCuts,
+    cutInnerCube,
+    cutBottomHole,
+    bottomCutoutWidth,
+    innerCubeSize,
+    bottomCutoutSides,
+  ]);
 
   useEffect(() => {
     if (!meshRef.current || !geometry) return;

@@ -30,6 +30,8 @@ interface IDebugSettings {
   innerCubeSize: number;
   bottomCutoutSides: number;
   explosionAmount: number;
+  // Render the viewport cells as they will export (inner cube + bottom hole).
+  previewPrintCuts: boolean;
 }
 
 interface IVoronoiSettings {
@@ -115,6 +117,7 @@ export const useVoronoiStore = create<IVoronoiSettings>(set => {
       innerCubeSize: 0.85,
       bottomCutoutSides: 8,
       explosionAmount: 1.0,
+      previewPrintCuts: false,
     },
     setDebugSettings: (data: Partial<IDebugSettings>) =>
       set(state => ({

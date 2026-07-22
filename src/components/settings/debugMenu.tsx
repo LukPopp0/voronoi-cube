@@ -30,6 +30,16 @@ export const DebugMenu = () => {
       </div>
 
       <div className="preference">
+        <label htmlFor="previewPrintCuts">Preview print cuts</label>
+        <input
+          id="previewPrintCuts"
+          type="checkbox"
+          checked={d.previewPrintCuts}
+          onChange={e => set({ previewPrintCuts: e.target.checked })}
+        />
+      </div>
+
+      <div className="preference">
         <label htmlFor="guardCountMode">Guard count mode</label>
         <select
           id="guardCountMode"
