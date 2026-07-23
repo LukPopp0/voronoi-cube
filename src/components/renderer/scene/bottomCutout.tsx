@@ -38,7 +38,7 @@ export const BottomCutout = ({ size = 10 }: BottomCutoutProps) => {
 
   return (
     <mesh geometry={geometry}>
-      <meshStandardMaterial color="#ff8c00" />
+      <meshPhongMaterial color="#949494" flatShading />
     </mesh>
   );
 };
