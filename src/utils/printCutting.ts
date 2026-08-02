@@ -1,14 +1,20 @@
 import { Vector3 } from 'three';
 import { CutCellData } from '../workers/types/workerOutput';
-import { PLANE_TOL, ON_PLANE_TOL, KEY_PRECISION, EPSILON } from './geometryConstants';
+import { PLANE_TOL, ON_PLANE_TOL, EPSILON } from './geometryConstants';
+import {
+  ClipPlane,
+  Polygon,
+  VertexPool,
+  clipPolygonByPlane,
+  sortPolygonVertices,
+  computeNewellNormal,
+  computeNewellNormalRaw,
+  computePolygonArea,
+} from './geometryHelper';
 
-/**
- * A half-plane: normal . p <= distance defines the "inside".
- */
-export interface ClipPlane {
-  normal: Vector3;
-  distance: number;
-}
+// Re-export shared primitives that external call sites import from here.
+export { VertexPool };
+export type { ClipPlane };
 
 /** A vertex of a convex cut region, with the indices of the planes it lies on. */
 export interface RegionCorner {
@@ -29,67 +35,6 @@ export interface CutRegion {
   capMask: boolean[];
   corners: RegionCorner[];
 }
-
-// --- Polygon type used internally (arrays of Vector3) -----------------------
-
-type Polygon = Vector3[];
-
-// --- Sutherland-Hodgman single-plane clip -----------------------------------
-
-/**
- * Clip a convex polygon by a single half-plane, keeping the "inside" portion
- * (where normal . p <= distance).
- * Returns the clipped polygon, or an empty array if fully outside.
- */
-const clipPolygonByPlane = (polygon: Polygon, plane: ClipPlane): Polygon => {
-  if (polygon.length === 0) return [];
-
-  const output: Vector3[] = [];
-
-  for (let i = 0; i < polygon.length; i++) {
-    const current = polygon[i];
-    const next = polygon[(i + 1) % polygon.length];
-
-    const dCurrent = plane.normal.dot(current) - plane.distance;
-    const dNext = plane.normal.dot(next) - plane.distance;
-
-    const currentInside = dCurrent <= PLANE_TOL;
-    const nextInside = dNext <= PLANE_TOL;
-
-    if (currentInside && nextInside) {
-      // Both inside -> keep next
-      output.push(next);
-    } else if (currentInside && !nextInside) {
-      // Leaving -> add intersection
-      const t = dCurrent / (dCurrent - dNext);
-      output.push(current.clone().lerp(next, t));
-    } else if (!currentInside && nextInside) {
-      // Entering -> add intersection, then next
-      const t = dCurrent / (dCurrent - dNext);
-      output.push(current.clone().lerp(next, t));
-      output.push(next);
-    }
-    // Both outside -> skip
-  }
-
-  // Drop consecutive (incl. wrap-around) duplicates: a vertex lying exactly
-  // ON the clip plane gets emitted twice - once by the "inside" case and
-  // once as the computed intersection point (t=0/t=1 lerp reproduces the
-  // endpoint). Happens whenever a polygon crosses the plane through one of
-  // its own vertices, e.g. a cell face passing through the frustum apex
-  // where all six side planes meet.
-  const deduped: Vector3[] = [];
-  for (const v of output) {
-    const prev = deduped[deduped.length - 1];
-    if (prev && prev.distanceTo(v) < EPSILON) continue;
-    deduped.push(v);
-  }
-  while (deduped.length > 1 && deduped[0].distanceTo(deduped[deduped.length - 1]) < EPSILON) {
-    deduped.pop();
-  }
-
-  return deduped;
-};
 
 // --- Recursive region subtraction for a single face --------------------------
 
@@ -166,104 +111,6 @@ const subtractCubeFromFace = (polygon: Polygon, cubePlanes: ClipPlane[]): Polygo
 
   return result;
 };
-
-// --- Vertex pool helper -----------------------------------------------------
-
-/**
- * Rounded coordinate string for vertex-dedup keys, with IEEE negative zero
- * collapsed to positive zero. Clipping a face through the frustum apex/axis
- * (where the side planes all meet at a coordinate of ~0) can yield a component
- * of -0; `(-0).toFixed(n)` is "-0.000..." which would hash DIFFERENTLY from
- * "0.000...", splitting a single apex vertex into two pool entries and leaving
- * unpaired edges (holes) exactly at that plane. Normalizing the sign of zero
- * merges them.
- */
-const coordKey = (n: number): string => {
-  const s = n.toFixed(KEY_PRECISION);
-  return s[0] === '-' && Number(s) === 0 ? s.slice(1) : s;
-};
-
-export class VertexPool {
-  vertices: number[] = [];
-  private map = new Map<string, number>();
-
-  getOrAdd(v: Vector3): number {
-    const key = `${coordKey(v.x)}_${coordKey(v.y)}_${coordKey(v.z)}`;
-    const existing = this.map.get(key);
-    if (existing !== undefined) return existing;
-    const idx = this.vertices.length / 3;
-    this.vertices.push(v.x, v.y, v.z);
-    this.map.set(key, idx);
-    return idx;
-  }
-
-  getVertex(index: number): Vector3 {
-    return new Vector3(
-      this.vertices[index * 3],
-      this.vertices[index * 3 + 1],
-      this.vertices[index * 3 + 2],
-    );
-  }
-}
-
-// --- Sort polygon vertices (for cap faces) ----------------------------------
-
-const sortPolygonVertices = (vertices: Vector3[], normal: Vector3): Vector3[] => {
-  if (vertices.length < 3) return vertices;
-
-  // Compute centroid
-  const center = new Vector3(0, 0, 0);
-  for (const v of vertices) center.add(v);
-  center.divideScalar(vertices.length);
-
-  // Build orthonormal basis on the plane
-  let refVec = new Vector3(1, 0, 0);
-  if (Math.abs(normal.dot(refVec)) > 0.9) refVec = new Vector3(0, 1, 0);
-
-  const u = refVec
-    .clone()
-    .sub(normal.clone().multiplyScalar(normal.dot(refVec)))
-    .normalize();
-  const v = normal.clone().cross(u);
-
-  return vertices
-    .map(vertex => {
-      const rel = vertex.clone().sub(center);
-      return { vertex, angle: Math.atan2(rel.dot(v), rel.dot(u)) };
-    })
-    .sort((a, b) => a.angle - b.angle)
-    .map(va => va.vertex);
-};
-
-// --- Newell's method: robust polygon normal from winding --------------------
-
-/**
- * Unnormalized Newell normal: sums a contribution from every edge, so unlike
- * a single vertex-triple cross product it stays well-conditioned even when
- * some individual triple happens to be collinear (e.g. a T-junction-spliced
- * vertex sitting on an existing edge). Its length is 2x the polygon's area
- * for a planar polygon, and near-zero iff the whole polygon is degenerate
- * (collinear/coincident vertices) - useful as a degeneracy test on its own.
- */
-const computeNewellNormalRaw = (polygon: Polygon): Vector3 => {
-  const normal = new Vector3(0, 0, 0);
-  const n = polygon.length;
-  for (let i = 0; i < n; i++) {
-    const current = polygon[i];
-    const next = polygon[(i + 1) % n];
-    normal.x += (current.y - next.y) * (current.z + next.z);
-    normal.y += (current.z - next.z) * (current.x + next.x);
-    normal.z += (current.x - next.x) * (current.y + next.y);
-  }
-  return normal;
-};
-
-const computeNewellNormal = (polygon: Polygon): Vector3 =>
-  computeNewellNormalRaw(polygon).normalize();
-
-/** Polygon area from the Newell normal's magnitude (exact for planar polygons). */
-const computePolygonArea = (polygon: Polygon): number =>
-  computeNewellNormalRaw(polygon).length() / 2;
 
 // --- Build the inner-cube cut region (in cell-local coordinates) ------------
 
