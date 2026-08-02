@@ -7,9 +7,9 @@ import { WorkerOutput } from './types/workerOutput';
 
 // Worker message handler
 self.onmessage = (e: MessageEvent<WorkerInput>) => {
-  const { cell, triangleIndices, destructionParameter, cubeSize, particleId, preview } = e.data;
+  const { cell, destructionParameter, cubeSize, particleId, preview, requestId } = e.data;
 
-  const cellData = cutCellCore(cell, triangleIndices, destructionParameter, cubeSize);
+  const cellData = cutCellCore(cell, destructionParameter, cubeSize);
   cellData.particleId = particleId;
 
   // Display copy: when previewing, cut the print regions off a copy so the
@@ -32,6 +32,7 @@ self.onmessage = (e: MessageEvent<WorkerInput>) => {
     normals: triangulated.normals,
     indices: triangulated.indices,
     cellData,
+    requestId,
   };
 
   self.postMessage(result, [result.positions.buffer, result.normals.buffer, result.indices.buffer]);

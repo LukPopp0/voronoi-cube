@@ -10,7 +10,6 @@ import {
 } from '../randomDistributions';
 import { cutCellCore, triangulateCellData } from '../cellCuttingAlgorithm';
 import { prepareForPrint } from '../printCutting';
-import { polygonToTriangles } from '../geometryHelper';
 import { checkCutCellData, checkTriangulated, holeCount } from './helpers/meshInvariants';
 
 /**
@@ -174,8 +173,7 @@ describe('watertight after print cuts in the safe regime (voro3d)', () => {
     for (const seed of [1, 2, 3]) {
       const cells = await generateGuardedCells(n, seed, opts);
       const gapCut = cells.map(cell => {
-        const tri = cell.faces.map(polygonToTriangles).flat().flat();
-        const cut = cutCellCore(cell, tri, GAP_SIZE, SIZE);
+        const cut = cutCellCore(cell, GAP_SIZE, SIZE);
         cut.particleId = cell.particleID;
         return cut;
       });
@@ -224,8 +222,7 @@ describe('bottom cut leaves no real holes at low ring angles (voro3d)', () => {
       for (const seed of [1, 2, 3]) {
         const cells = await generateGuardedCells(18, seed, opts);
         const gapCut = cells.map(cell => {
-          const tri = cell.faces.map(polygonToTriangles).flat().flat();
-          const cut = cutCellCore(cell, tri, GAP_SIZE, SIZE);
+          const cut = cutCellCore(cell, GAP_SIZE, SIZE);
           cut.particleId = cell.particleID;
           return cut;
         });

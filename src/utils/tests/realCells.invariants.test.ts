@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { cutCellCore, triangulateCellData } from '../cellCuttingAlgorithm';
 import { prepareForPrint, cutInnerCubeFromCell } from '../printCutting';
-import { polygonToTriangles } from '../geometryHelper';
 import { checkCutCellData, checkTriangulated, polygonVolume, meshStats } from './helpers/meshInvariants';
 import { generateRealCells } from './helpers/realCellFixtures';
 import type { CutCellData } from '../../workers/types/workerOutput';
@@ -78,8 +77,7 @@ beforeAll(async () => {
       const cells = await generateRealCells(nPoints, seed, SIZE);
 
       const gapCutCells = cells.map(cell => {
-        const triangleIndices = cell.faces.map(polygonToTriangles).flat().flat();
-        const cutCellData = cutCellCore(cell, triangleIndices, GAP_SIZE, SIZE);
+        const cutCellData = cutCellCore(cell, GAP_SIZE, SIZE);
         // Mirror cellCuttingWorker.ts: cutCellCore always returns
         // particleId=-1, the caller stamps the real id afterward.
         cutCellData.particleId = cell.particleID;

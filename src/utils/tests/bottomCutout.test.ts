@@ -7,7 +7,6 @@ import {
 } from '../printCutting';
 import { buildBottomPlug } from '../plugGeometry';
 import { cutCellCore, triangulateCellData } from '../cellCuttingAlgorithm';
-import { polygonToTriangles } from '../geometryHelper';
 import { checkCutCellData, checkTriangulated, polygonVolume } from './helpers/meshInvariants';
 import { makeBoxCell } from './helpers/syntheticCells';
 import { generateRealCells } from './helpers/realCellFixtures';
@@ -428,8 +427,7 @@ describe('real cells: gap cut -> inner cube -> frustum', () => {
   beforeAll(async () => {
     const cells = await generateRealCells(100, 1, SIZE);
     gapCutCells = cells.map(cell => {
-      const triangleIndices = cell.faces.map(polygonToTriangles).flat().flat();
-      const cutCellData = cutCellCore(cell, triangleIndices, GAP_SIZE, SIZE);
+      const cutCellData = cutCellCore(cell, GAP_SIZE, SIZE);
       cutCellData.particleId = cell.particleID;
       return cutCellData;
     });
