@@ -18,4 +18,7 @@ export interface WorkerOutput {
   normals: Float32Array;
   indices: Uint32Array;
   cellData: CutCellData;
+  // Echoes WorkerInput.requestId so the hook can drop superseded (stale) results
+  // that finished after a newer cut was requested (e.g. during a gap-slider drag).
+  requestId: number;
 }

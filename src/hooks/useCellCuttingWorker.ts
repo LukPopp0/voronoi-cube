@@ -11,7 +11,6 @@ interface UseCellCuttingWorkerResult {
   isProcessing: boolean;
   cutCell: (
     cell: VoroCell,
-    triangleIndices: number[],
     destructionParameter: number,
     cubeSize: number,
     particleId: number,
@@ -25,6 +24,11 @@ interface UseCellCuttingWorkerResult {
  */
 export const useCellCuttingWorker = (): UseCellCuttingWorkerResult => {
   const workerRef = useRef<Worker | null>(null);
+  // Monotonic request id: incremented on each cutCell, echoed by the worker.
+  // Results whose id is not the latest are stale (superseded by a newer cut,
+  // e.g. mid gap-slider drag) and are dropped so they don't rebuild geometry or
+  // register stale cell data in the store.
+  const requestIdRef = useRef(0);
   const [geometry, setGeometry] = useState<BufferGeometry | null>(null);
   const [cellData, setCellData] = useState<CutCellData | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -33,7 +37,10 @@ export const useCellCuttingWorker = (): UseCellCuttingWorkerResult => {
     workerRef.current = new CellCuttingWorker();
 
     workerRef.current.onmessage = (e: MessageEvent<WorkerOutput>) => {
-      const { positions, normals, indices, cellData: workerCellData } = e.data;
+      const { positions, normals, indices, cellData: workerCellData, requestId } = e.data;
+
+      // Drop superseded results.
+      if (requestId !== requestIdRef.current) return;
 
       const bg = new BufferGeometry();
 
@@ -62,7 +69,6 @@ export const useCellCuttingWorker = (): UseCellCuttingWorkerResult => {
   const cutCell = useCallback(
     (
       cell: VoroCell,
-      triangleIndices: number[],
       destructionParameter: number,
       cubeSize: number,
       particleId: number,
@@ -70,6 +76,7 @@ export const useCellCuttingWorker = (): UseCellCuttingWorkerResult => {
     ) => {
       if (!workerRef.current) return;
 
+      const requestId = ++requestIdRef.current;
       setIsProcessing(true);
 
       workerRef.current.postMessage({
@@ -80,11 +87,11 @@ export const useCellCuttingWorker = (): UseCellCuttingWorkerResult => {
           vertices: cell.vertices,
           faces: cell.faces,
         },
-        triangleIndices,
         destructionParameter,
         cubeSize,
         particleId,
         preview,
+        requestId,
       });
     },
     [],

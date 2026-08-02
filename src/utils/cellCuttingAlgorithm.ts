@@ -2,151 +2,53 @@ import { BufferAttribute, BufferGeometry, Vector3 } from 'three';
 import type { VoroCell } from 'voro3d';
 import { CellDataInput } from '../workers/types/workerInput';
 import { CutCellData } from '../workers/types/workerOutput';
-import { EPSILON, PLANE_TOL, ON_PLANE_TOL, KEY_PRECISION } from './geometryConstants';
+import { ON_PLANE_TOL, PLANE_TOL, EPSILON } from './geometryConstants';
+import {
+  ClipPlane,
+  Polygon,
+  VertexPool,
+  clipPolygonByPlane,
+  sortPolygonVertices,
+  computeNewellNormalRaw,
+  signedPlaneDistance,
+} from './geometryHelper';
+
+const EMPTY_CELL = (cell: CellDataInput): CutCellData => ({
+  vertices: [],
+  faces: [],
+  particleId: -1,
+  x: cell.x,
+  y: cell.y,
+  z: cell.z,
+});
+
+/** Get vertex `index` from a flat [x,y,z,...] array. */
+const getVertex = (vertices: number[], index: number): Vector3 =>
+  new Vector3(vertices[3 * index + 0], vertices[3 * index + 1], vertices[3 * index + 2]);
 
 /**
- * Represents a plane in 3D space using the equation: normal . p = distance
+ * Outward-oriented plane of a cell face polygon, winding the polygon in place to
+ * match. Cells are stored in cell-local coordinates (centered at the origin), so
+ * a face's outward normal is the one pointing away from the origin. The single
+ * Newell normal serves both orientation and the winding check: if it points
+ * inward we negate it AND reverse the polygon, so the polygon stays wound to its
+ * outward normal (clipping preserves that; triangulateCellData relies on it).
  */
-interface Plane {
-  normal: Vector3;
-  distance: number;
-  faceIndex: number; // Track which original face this plane belongs to
-}
-
-/**
- * Get a vertex from the vertices array by index
- */
-const getVertex = (vertices: number[], index: number): Vector3 => {
-  return new Vector3(vertices[3 * index + 0], vertices[3 * index + 1], vertices[3 * index + 2]);
-};
-
-/**
- * Compute the plane equation for a face.
- * Returns the outward-pointing normal and the signed distance from origin.
- */
-const computeFacePlane = (
-  faceIndices: number[],
-  vertices: number[],
-  cellCenter: Vector3,
-): Plane & { center: Vector3 } => {
-  if (faceIndices.length < 3) {
-    throw new Error('Face must have at least 3 vertices');
-  }
-
-  const v0 = getVertex(vertices, faceIndices[0]);
-  const v1 = getVertex(vertices, faceIndices[1]);
-  const v2 = getVertex(vertices, faceIndices[2]);
-
-  // Compute normal using cross product
-  const edge1 = v1.clone().sub(v0);
-  const edge2 = v2.clone().sub(v0);
-  const normal = edge1.cross(edge2).normalize();
-
-  // Compute face center
+const faceOutwardPlane = (polygon: Polygon): ClipPlane & { center: Vector3 } => {
   const center = new Vector3(0, 0, 0);
-  for (const idx of faceIndices) {
-    center.add(getVertex(vertices, idx));
-  }
-  center.divideScalar(faceIndices.length);
+  for (const v of polygon) center.add(v);
+  center.divideScalar(polygon.length);
 
-  // Ensure normal points outward (away from cell center)
-  const toCenter = cellCenter.clone().sub(center);
-  if (normal.dot(toCenter) > 0) {
+  const normal = computeNewellNormalRaw(polygon).normalize();
+  if (normal.dot(center) < 0) {
     normal.negate();
+    polygon.reverse();
   }
 
-  // Distance from origin: d = normal . point_on_plane
-  const distance = normal.dot(center);
-
-  return { normal, distance, center, faceIndex: -1 };
+  return { normal, distance: normal.dot(center), center };
 };
 
-/**
- * Find the intersection point of three planes.
- * Returns null if planes are parallel or nearly parallel.
- */
-const threePlaneIntersection = (p1: Plane, p2: Plane, p3: Plane): Vector3 | null => {
-  const n1 = p1.normal;
-  const n2 = p2.normal;
-  const n3 = p3.normal;
-
-  const n2CrossN3 = n2.clone().cross(n3);
-  const det = n1.dot(n2CrossN3);
-
-  // If determinant is near zero, planes are parallel or coplanar
-  if (Math.abs(det) < EPSILON) {
-    return null;
-  }
-
-  // Intersection point formula:
-  // p = (d1 * (n2 x n3) + d2 * (n3 x n1) + d3 * (n1 x n2)) / det
-  const n3CrossN1 = n3.clone().cross(n1);
-  const n1CrossN2 = n1.clone().cross(n2);
-
-  const point = new Vector3(0, 0, 0);
-  point.add(n2CrossN3.multiplyScalar(p1.distance));
-  point.add(n3CrossN1.multiplyScalar(p2.distance));
-  point.add(n1CrossN2.multiplyScalar(p3.distance));
-  point.divideScalar(det);
-
-  return point;
-};
-
-/**
- * Check if a point is inside or on all half-spaces defined by the planes.
- * A point p is inside plane i if: normal_i . p <= distance_i + epsilon
- */
-const isPointInsideAllPlanes = (
-  point: Vector3,
-  planes: Plane[],
-  tolerance: number = PLANE_TOL,
-): boolean => {
-  for (const plane of planes) {
-    const signedDist = plane.normal.dot(point) - plane.distance;
-    if (signedDist > tolerance) {
-      return false;
-    }
-  }
-  return true;
-};
-
-/**
- * Sort vertices of a face in counter-clockwise order when viewed from outside.
- */
-const sortFaceVertices = (vertices: Vector3[], normal: Vector3, center: Vector3): Vector3[] => {
-  if (vertices.length < 3) return vertices;
-
-  // Create a local 2D coordinate system on the face plane
-  let refVec = new Vector3(1, 0, 0);
-  if (Math.abs(normal.dot(refVec)) > 0.9) {
-    refVec = new Vector3(0, 1, 0);
-  }
-
-  // Create orthonormal basis on the plane
-  const u = refVec
-    .clone()
-    .sub(normal.clone().multiplyScalar(normal.dot(refVec)))
-    .normalize();
-  const v = normal.clone().cross(u);
-
-  // Compute angle for each vertex relative to center
-  const verticesWithAngles = vertices.map(vertex => {
-    const rel = vertex.clone().sub(center);
-    const x = rel.dot(u);
-    const y = rel.dot(v);
-    const angle = Math.atan2(y, x);
-    return { vertex, angle };
-  });
-
-  // Sort by angle (counter-clockwise)
-  verticesWithAngles.sort((a, b) => a.angle - b.angle);
-
-  return verticesWithAngles.map(va => va.vertex);
-};
-
-/**
- * Check if a face is at the boundary of the cube.
- */
+/** Whether a face lies on the cube boundary (its plane must not be offset). */
 const isBorderFace = (
   faceCenter: Vector3,
   cellPosition: Vector3,
@@ -164,160 +66,153 @@ const isBorderFace = (
 };
 
 /**
- * Core algorithm that shrinks a Voronoi cell by moving each face inward.
- * Returns polygon-level cell data (vertices + face index arrays).
+ * Build the cap polygon closing the cut where a clip plane sliced the solid.
+ * Its vertices are the unique intersection points lying on the plane; wind them
+ * toward the plane normal (outward) so triangulateCellData derives an outward
+ * normal. Returns null if the cap is degenerate (< 3 distinct verts or ~0 area).
+ */
+const buildCapFace = (onPlaneVerts: Vector3[], planeNormal: Vector3): Polygon | null => {
+  // Cap corners are few (~3-8); dedup by distance scan - cheaper than building
+  // toFixed string keys, which dominated the per-plane cost on real cells.
+  const unique: Vector3[] = [];
+  for (const v of onPlaneVerts) {
+    let dup = false;
+    for (const u of unique) {
+      if (u.distanceToSquared(v) < ON_PLANE_TOL * ON_PLANE_TOL) {
+        dup = true;
+        break;
+      }
+    }
+    if (!dup) unique.push(v);
+  }
+  if (unique.length < 3) return null;
+
+  const sorted = sortPolygonVertices(unique, planeNormal);
+  const raw = computeNewellNormalRaw(sorted);
+  if (raw.dot(planeNormal) < 0) sorted.reverse();
+  if (raw.length() / 2 < EPSILON) return null; // area = |Newell|/2
+
+  return sorted;
+};
+
+/**
+ * Clip a convex solid (a closed set of outward-wound face polygons) by one
+ * half-space (`normal . p <= distance`), keeping the inside and sealing the cut
+ * with a single cap face. Convex-in -> convex-out, watertight by construction.
+ */
+const clipSolidByPlane = (solid: Polygon[], plane: ClipPlane): Polygon[] => {
+  const result: Polygon[] = [];
+  const capVerts: Vector3[] = [];
+
+  for (const face of solid) {
+    // Classify the face against the plane in one distance pass. Most face/plane
+    // pairs are fully inside (a far face untouched by this offset plane) - skip
+    // the Sutherland-Hodgman allocation for those; only straddling faces clip.
+    let maxD = -Infinity;
+    let minD = Infinity;
+    for (const v of face) {
+      const d = signedPlaneDistance(plane, v);
+      if (d > maxD) maxD = d;
+      if (d < minD) minD = d;
+    }
+
+    if (minD > PLANE_TOL) continue; // fully outside -> drop
+
+    if (maxD <= PLANE_TOL) {
+      // Fully inside -> keep as-is. If it grazes the plane, its on-plane
+      // vertices are cap corners (a face flush with the cut boundary).
+      result.push(face);
+      if (maxD > -ON_PLANE_TOL) {
+        for (const v of face) {
+          if (Math.abs(signedPlaneDistance(plane, v)) < ON_PLANE_TOL) capVerts.push(v);
+        }
+      }
+      continue;
+    }
+
+    // Straddles the plane -> clip and record the new cut-boundary vertices.
+    const clipped = clipPolygonByPlane(face, plane);
+    if (clipped.length < 3) continue;
+    result.push(clipped);
+    for (const v of clipped) {
+      if (Math.abs(signedPlaneDistance(plane, v)) < ON_PLANE_TOL) capVerts.push(v);
+    }
+  }
+
+  const cap = buildCapFace(capVerts, plane.normal);
+  if (cap) result.push(cap);
+
+  return result;
+};
+
+/**
+ * Core algorithm that shrinks a Voronoi cell by moving each non-border face
+ * inward by `destructionParameter`, creating the gaps between cells.
+ *
+ * The shrunk cell is the intersection of the original cell (already the
+ * intersection of its face half-spaces) with the inward-offset half-spaces of
+ * its non-border faces. We compute it by sequentially clipping the convex cell
+ * solid by each offset plane (Sutherland-Hodgman per face + one cap per plane).
+ * This is O(F^2 * V) and watertight for convex input, versus the former
+ * O(F^4) all-triples enumeration. Border faces are left at the cube boundary
+ * (never offset) so the overall cube does not shrink.
+ *
+ * Returns polygon-level cell data (shared vertex pool + face index arrays).
  */
 export const cutCellCore = (
   cell: CellDataInput,
-  triangleIndices: number[],
   destructionParameter: number,
   cubeSize: number,
 ): CutCellData => {
-  // If no shrinking needed, return original cell data
-  if (destructionParameter <= 0) {
-    return {
-      vertices: Array.from(cell.vertices),
-      faces: cell.faces.map(f => [...f]),
-      particleId: -1,
-      x: cell.x,
-      y: cell.y,
-      z: cell.z,
-    };
-  }
-
-  const cellCenter = new Vector3(0, 0, 0);
+  const shrink = destructionParameter > 0;
   const cellPosition = new Vector3(cell.x, cell.y, cell.z);
 
-  // Step 1: Compute plane equations for all faces
-  const planes: Plane[] = [];
+  // Build outward-wound original face polygons; collect the inward-offset
+  // planes of the non-border faces (the ones that create the gap). Winding the
+  // faces outward is done even at gapSize 0 (no offset planes) - the raw voro3d
+  // face winding is inconsistent, and triangulateCellData treats winding as the
+  // normal's source of truth, so an unwound outward face would render inward and
+  // get backface-culled (disappear) by the FrontSide material.
+  const solid: Polygon[] = [];
+  const offsetPlanes: ClipPlane[] = [];
 
-  for (let fi = 0; fi < cell.faces.length; fi++) {
-    const faceIndices = cell.faces[fi];
-    const planeData = computeFacePlane(faceIndices, cell.vertices, cellCenter);
-    planeData.faceIndex = fi;
+  for (const faceIndices of cell.faces) {
+    if (faceIndices.length < 3) continue;
 
-    const isBorder = isBorderFace(planeData.center, cellPosition, cubeSize);
+    const polygon = faceIndices.map(i => getVertex(cell.vertices, i));
+    // faceOutwardPlane winds `polygon` in place to match its outward normal, so
+    // clipping preserves outward winding.
+    const { normal, distance, center } = faceOutwardPlane(polygon);
+    solid.push(polygon);
 
-    // Step 2: Offset plane inward (reduce distance) - only for non-border faces
-    const offsetPlane: Plane = {
-      normal: planeData.normal.clone(),
-      distance: isBorder ? planeData.distance : planeData.distance - destructionParameter,
-      faceIndex: fi,
-    };
-    planes.push(offsetPlane);
-  }
-
-  // Step 3: Find all valid vertices by intersecting combinations of 3 planes
-  const newVertices: Vector3[] = [];
-  const vertexToPlanes: Map<number, Set<number>> = new Map();
-
-  const numPlanes = planes.length;
-  for (let i = 0; i < numPlanes; i++) {
-    for (let j = i + 1; j < numPlanes; j++) {
-      for (let k = j + 1; k < numPlanes; k++) {
-        const intersection = threePlaneIntersection(planes[i], planes[j], planes[k]);
-
-        if (intersection === null) continue;
-
-        // Step 4: Filter valid vertices
-        // A vertex is valid only if it lies on the inside of all half-spaces
-        if (!isPointInsideAllPlanes(intersection, planes, PLANE_TOL)) {
-          continue;
-        }
-
-        // Check for duplicate vertices
-        let isDuplicate = false;
-        let existingIndex = -1;
-        for (let vi = 0; vi < newVertices.length; vi++) {
-          if (newVertices[vi].distanceTo(intersection) < ON_PLANE_TOL) {
-            isDuplicate = true;
-            existingIndex = vi;
-            break;
-          }
-        }
-
-        if (!isDuplicate) {
-          existingIndex = newVertices.length;
-          newVertices.push(intersection);
-          vertexToPlanes.set(existingIndex, new Set());
-        }
-
-        // Track which planes this vertex belongs to
-        vertexToPlanes.get(existingIndex)!.add(i);
-        vertexToPlanes.get(existingIndex)!.add(j);
-        vertexToPlanes.get(existingIndex)!.add(k);
-      }
+    if (shrink && !isBorderFace(center, cellPosition, cubeSize)) {
+      offsetPlanes.push({ normal, distance: distance - destructionParameter });
     }
   }
 
-  // If no valid vertices found (cell completely collapsed), return empty geometry
-  if (newVertices.length < 4) {
-    return {
-      vertices: [],
-      faces: [],
-      particleId: -1,
-      x: cell.x,
-      y: cell.y,
-      z: cell.z,
-    };
+  // Sequentially intersect the cell with each inward-offset half-space. With no
+  // offset planes (gapSize 0) this is a no-op and the outward-wound cell passes
+  // straight through.
+  let current = solid;
+  for (const plane of offsetPlanes) {
+    current = clipSolidByPlane(current, plane);
+    // A convex polytope needs >= 4 faces; fewer means it collapsed to nothing.
+    if (current.length < 4) return EMPTY_CELL(cell);
   }
 
-  // Step 5: Reconstruct faces
-  // For each plane, collect the vertices that lie on it, and sort them
-  // in proper winding order to form the new face polygon.
-  // If a face has fewer than 3 valid vertices after shrinking, it has collapsed.
-  const newFaces: Vector3[][] = [];
-  const newFaceNormals: Vector3[] = [];
-
-  for (let pi = 0; pi < planes.length; pi++) {
-    const faceVertices: Vector3[] = [];
-
-    // Find all vertices that lie on this plane
-    for (let vi = 0; vi < newVertices.length; vi++) {
-      const vertexPlanes = vertexToPlanes.get(vi);
-      if (vertexPlanes && vertexPlanes.has(pi)) {
-        faceVertices.push(newVertices[vi].clone());
-      }
-    }
-
-    if (faceVertices.length < 3) continue;
-
-    // Compute face center for sorting
-    const faceCenter = new Vector3(0, 0, 0);
-    for (const v of faceVertices) {
-      faceCenter.add(v);
-    }
-    faceCenter.divideScalar(faceVertices.length);
-
-    // Sort vertices in proper winding order
-    const sortedVertices = sortFaceVertices(faceVertices, planes[pi].normal, faceCenter);
-
-    newFaces.push(sortedVertices);
-    newFaceNormals.push(planes[pi].normal.clone());
+  // Build the shared vertex pool and index the faces.
+  const pool = new VertexPool();
+  const faces: number[][] = [];
+  for (const face of current) {
+    if (face.length < 3) continue;
+    faces.push(face.map(v => pool.getOrAdd(v)));
   }
 
-  // Step 6: Build polygon-level cell data with shared vertex pool
-  const vertexPool: number[] = [];
-  const faceIndexArrays: number[][] = [];
-  const vertexMap = new Map<string, number>();
-
-  const getOrAddPoolVertex = (v: Vector3): number => {
-    const key = `${v.x.toFixed(KEY_PRECISION)}_${v.y.toFixed(KEY_PRECISION)}_${v.z.toFixed(KEY_PRECISION)}`;
-    if (vertexMap.has(key)) return vertexMap.get(key)!;
-    const idx = vertexPool.length / 3;
-    vertexPool.push(v.x, v.y, v.z);
-    vertexMap.set(key, idx);
-    return idx;
-  };
-
-  for (const face of newFaces) {
-    const indices = face.map(v => getOrAddPoolVertex(v));
-    faceIndexArrays.push(indices);
-  }
+  if (faces.length < 4 || pool.vertices.length / 3 < 4) return EMPTY_CELL(cell);
 
   return {
-    vertices: vertexPool,
-    faces: faceIndexArrays,
+    vertices: pool.vertices,
+    faces,
     particleId: -1,
     x: cell.x,
     y: cell.y,
@@ -404,11 +299,10 @@ export const triangulateCellData = (
  */
 export const cutCell = (
   cell: VoroCell,
-  triangleIndices: number[],
   destructionParameter: number,
   cubeSize: number,
 ): BufferGeometry => {
-  const cellData = cutCellCore(cell, triangleIndices, destructionParameter, cubeSize);
+  const cellData = cutCellCore(cell, destructionParameter, cubeSize);
   const result = triangulateCellData(cellData);
 
   const bg = new BufferGeometry();

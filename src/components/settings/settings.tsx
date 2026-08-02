@@ -4,6 +4,11 @@ import { DownloadButton } from './downloadButton';
 import { DebugMenu } from './debugMenu';
 import './settings.scss';
 
+// Trailing debounce before committing gapSize to the store (which re-cuts every
+// cell). The local slider value updates immediately, so the handle stays smooth;
+// this only coalesces a fast drag into fewer full recomputes. Kept low for
+// responsiveness - stale in-flight results are dropped via the worker requestId
+// (useCellCuttingWorker), so a bigger debounce isn't needed to avoid churn.
 const bufferTimeMs = 20;
 
 export const Settings = () => {
