@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { BufferAttribute, BufferGeometry } from 'three';
+import { BufferGeometry } from 'three';
 import { VoroCell } from 'voro3d';
+import { toBufferGeometry } from '@/utils/geometry/bufferGeometry';
 import CellCuttingWorker from '../workers/cellCuttingWorker?worker';
+import { CutCellData } from '@/types/domain';
 import { WorkerPreview } from '../workers/types/workerInput';
-import { CutCellData, WorkerOutput } from '../workers/types/workerOutput';
+import { WorkerOutput } from '../workers/types/workerOutput';
 
 interface UseCellCuttingWorkerResult {
   geometry: BufferGeometry | null;
@@ -42,15 +44,7 @@ export const useCellCuttingWorker = (): UseCellCuttingWorkerResult => {
       // Drop superseded results.
       if (requestId !== requestIdRef.current) return;
 
-      const bg = new BufferGeometry();
-
-      if (positions.length > 0) {
-        bg.setAttribute('position', new BufferAttribute(positions, 3));
-        bg.setAttribute('normal', new BufferAttribute(normals, 3));
-        bg.setIndex(new BufferAttribute(indices, 1));
-      }
-
-      setGeometry(bg);
+      setGeometry(toBufferGeometry({ positions, normals, indices }));
       setCellData(workerCellData);
       setIsProcessing(false);
     };

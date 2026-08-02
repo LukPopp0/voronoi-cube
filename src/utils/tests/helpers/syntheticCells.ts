@@ -1,4 +1,4 @@
-import { CutCellData } from '../../../workers/types/workerOutput';
+import { CutCellData } from '@/types/domain';
 
 /**
  * Synthetic axis-aligned box cells for probing the inner-cube cutting

@@ -1,6 +1,6 @@
 import { Vector3 } from 'three';
-import { CutCellData } from '../workers/types/workerOutput';
-import { PLANE_TOL, ON_PLANE_TOL, EPSILON } from './geometryConstants';
+import { CutCellData } from '@/types/domain';
+import { PLANE_TOL, ON_PLANE_TOL, EPSILON } from '@/utils/geometry/constants';
 import {
   ClipPlane,
   Polygon,
@@ -10,7 +10,7 @@ import {
   computeNewellNormal,
   computeNewellNormalRaw,
   computePolygonArea,
-} from './geometryHelper';
+} from '@/utils/geometry/primitives';
 
 // Re-export shared primitives that external call sites import from here.
 export { VertexPool };

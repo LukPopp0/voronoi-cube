@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 
-import { cutCellCore, triangulateCellData } from '../utils/cellCuttingAlgorithm';
-import { prepareForPrint } from '../utils/printCutting';
+import { cutCellCore, triangulateCellData } from '@/utils/cutting/cellCutting';
+import { prepareForPrint } from '@/utils/print/printCutting';
 import { WorkerInput } from './types/workerInput';
 import { WorkerOutput } from './types/workerOutput';
 

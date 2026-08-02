@@ -1,5 +1,5 @@
 import { Vector3 } from 'three';
-import { CutCellData } from '../../../workers/types/workerOutput';
+import { CutCellData } from '@/types/domain';
 
 /**
  * Reusable mesh-invariant checker for geometry produced by the cutting

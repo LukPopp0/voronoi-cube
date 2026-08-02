@@ -1,4 +1,4 @@
-import { CutCellData } from '../workers/types/workerOutput';
+import { CutCellData } from '@/types/domain';
 
 /**
  * Solid one-piece plug for the bottom cutout (N-gon frustum), so a full cube

@@ -207,21 +207,6 @@ export const DebugMenu = () => {
           onChange={e => set({ bottomCutoutSides: Number.parseInt(e.target.value) })}
         />
       </div>
-
-      <div className="preference">
-        <label htmlFor="explosionAmount">Explosion amount</label>
-        <div>
-          <input
-            id="explosionAmount"
-            type="range"
-            min={0}
-            max={3}
-            step={0.05}
-            value={d.explosionAmount}
-            onChange={e => set({ explosionAmount: Number.parseFloat(e.target.value) })}
-          />
-        </div>
-      </div>
     </details>
   );
 };

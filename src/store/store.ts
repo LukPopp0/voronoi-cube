@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import { updateURLParameter } from '../utils/urlEdit';
+import { updateURLParameter } from '@/store/urlEdit';
 import { clamp } from 'three/src/math/MathUtils';
-import { CutCellData } from '../workers/types/workerOutput';
+import { CutCellData } from '@/types/domain';
 
 interface IPointDistribution {
   distribution: 'simple' | 'fibonacci' | string;
@@ -14,7 +14,7 @@ interface IPointDistribution {
 /**
  * Developer / tuning values, surfaced only in the debug menu (no URL sync).
  * Groups the guard-ring distribution knobs with the formerly UI-less print/
- * render dev values (innerCubeSize, bottomCutoutSides, explosionAmount).
+ * render dev values (innerCubeSize, bottomCutoutSides).
  */
 interface IDebugSettings {
   // Guard-ring distribution (fibonacciDistributionGuarded). Angles in radians.
@@ -29,7 +29,6 @@ interface IDebugSettings {
   // Relocated dev knobs (previously top-level, no UI).
   innerCubeSize: number;
   bottomCutoutSides: number;
-  explosionAmount: number;
   // Render the viewport cells as they will export (inner cube + bottom hole).
   previewPrintCuts: boolean;
   // Show/hide the emissive inner-cube light-source box.
@@ -121,7 +120,6 @@ export const useVoronoiStore = create<IVoronoiSettings>(set => {
       marginFactor: 0.5,
       innerCubeSize: 0.85,
       bottomCutoutSides: 8,
-      explosionAmount: 1.0,
       previewPrintCuts: false,
       showInnerCube: true,
       showBottomCutout: true,

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { prepareForPrint } from '../printCutting';
-import { triangulateCellData } from '../cellCuttingAlgorithm';
+import { prepareForPrint } from '@/utils/print/printCutting';
+import { triangulateCellData } from '@/utils/cutting/cellCutting';
 
 describe('printCutting', () => {
   it('prepareForPrint returns empty array for empty input', () => {

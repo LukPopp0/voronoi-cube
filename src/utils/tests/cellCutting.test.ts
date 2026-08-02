@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { triangulateCellData } from '../cellCuttingAlgorithm';
-import { cutInnerCubeFromCell } from '../printCutting';
+import { triangulateCellData } from '@/utils/cutting/cellCutting';
+import { cutInnerCubeFromCell } from '@/utils/print/printCutting';
 import { checkTriangulated, signedVolume, polygonVolume } from './helpers/meshInvariants';
 import { makeBoxCell } from './helpers/syntheticCells';
 

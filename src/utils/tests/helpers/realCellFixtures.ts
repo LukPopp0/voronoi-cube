@@ -1,6 +1,6 @@
 import { Voro3D } from 'voro3d';
 import type { VoroCell } from 'voro3d';
-import { cubeDistribution, fibonacciDistributionRestricted } from '../../randomDistributions';
+import { cubeDistribution, fibonacciDistributionRestricted } from '@/utils/distributions/randomDistributions';
 
 /**
  * Generate real voro3d-computed Voronoi cells, mirroring the app's actual

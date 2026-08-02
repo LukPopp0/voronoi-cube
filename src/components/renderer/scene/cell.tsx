@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { VoroCell } from 'voro3d';
 import { Mesh } from 'three';
-import { useVoronoiStore } from '../../store/store';
-import { useCellCuttingWorker } from '../../hooks/useCellCuttingWorker';
+import { useVoronoiStore } from '@/store/store';
+import { useCellCuttingWorker } from '@/hooks/useCellCuttingWorker';
 import type { ThreeElements } from '@react-three/fiber';
 
 type CellProps = {
