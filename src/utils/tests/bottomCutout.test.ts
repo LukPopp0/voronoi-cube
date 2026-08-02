@@ -4,13 +4,13 @@ import {
   subtractRegionFromCell,
   cutInnerCubeFromCell,
   prepareForPrint,
-} from '../printCutting';
-import { buildBottomPlug } from '../plugGeometry';
-import { cutCellCore, triangulateCellData } from '../cellCuttingAlgorithm';
+} from '@/utils/print/printCutting';
+import { buildBottomPlug } from '@/utils/print/plugGeometry';
+import { cutCellCore, triangulateCellData } from '@/utils/cutting/cellCutting';
 import { checkCutCellData, checkTriangulated, polygonVolume } from './helpers/meshInvariants';
 import { makeBoxCell } from './helpers/syntheticCells';
 import { generateRealCells } from './helpers/realCellFixtures';
-import type { CutCellData } from '../../workers/types/workerOutput';
+import type { CutCellData } from '@/types/domain';
 
 /**
  * Bottom cutout (hex frustum) test suite.

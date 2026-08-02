@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
-import { BufferAttribute, BufferGeometry } from 'three';
 import { useVoronoiStore } from '../../../store/store';
-import { buildBottomPlug } from '../../../utils/plugGeometry';
-import { triangulateCellData } from '../../../utils/cellCuttingAlgorithm';
+import { buildBottomPlug } from '@/utils/print/plugGeometry';
+import { triangulateCellData } from '@/utils/cutting/cellCutting';
+import { toBufferGeometry } from '@/utils/geometry/bufferGeometry';
 
 type BottomCutoutProps = {
   size?: number;
@@ -24,14 +24,7 @@ export const BottomCutout = ({ size = 10 }: BottomCutoutProps) => {
 
   const geometry = useMemo(() => {
     const plug = buildBottomPlug(size, innerCubeSize, bottomCutoutWidth, gapSize, bottomCutoutSides);
-    const tri = triangulateCellData(plug);
-    const bg = new BufferGeometry();
-    if (tri.positions.length > 0) {
-      bg.setAttribute('position', new BufferAttribute(tri.positions, 3));
-      bg.setAttribute('normal', new BufferAttribute(tri.normals, 3));
-      bg.setIndex(new BufferAttribute(tri.indices, 1));
-    }
-    return bg;
+    return toBufferGeometry(triangulateCellData(plug));
   }, [size, innerCubeSize, bottomCutoutWidth, gapSize, bottomCutoutSides]);
 
   if (!previewPrintCuts || !showBottomCutout) return null;

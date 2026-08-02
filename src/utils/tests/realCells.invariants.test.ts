@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { cutCellCore, triangulateCellData } from '../cellCuttingAlgorithm';
-import { prepareForPrint, cutInnerCubeFromCell } from '../printCutting';
+import { cutCellCore, triangulateCellData } from '@/utils/cutting/cellCutting';
+import { prepareForPrint, cutInnerCubeFromCell } from '@/utils/print/printCutting';
 import { checkCutCellData, checkTriangulated, polygonVolume, meshStats } from './helpers/meshInvariants';
 import { generateRealCells } from './helpers/realCellFixtures';
-import type { CutCellData } from '../../workers/types/workerOutput';
+import type { CutCellData } from '@/types/domain';
 import realCellFixture87 from './fixtures/realCell-n100-seed1-particle87.json';
 import realCellFixture90 from './fixtures/realCell-n100-seed1-particle90.json';
 

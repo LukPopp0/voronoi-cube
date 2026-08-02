@@ -7,9 +7,9 @@ import {
   computeGuardCount,
   computePhiG,
   type GuardRingOptions,
-} from '../randomDistributions';
-import { cutCellCore, triangulateCellData } from '../cellCuttingAlgorithm';
-import { prepareForPrint } from '../printCutting';
+} from '@/utils/distributions/randomDistributions';
+import { cutCellCore, triangulateCellData } from '@/utils/cutting/cellCutting';
+import { prepareForPrint } from '@/utils/print/printCutting';
 import { checkCutCellData, checkTriangulated, holeCount } from './helpers/meshInvariants';
 
 /**

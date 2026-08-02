@@ -6,8 +6,8 @@ import {
   conformEdgesToPool,
   rotateForSafeFan,
   VertexPool,
-} from '../printCutting';
-import { triangulateCellData } from '../cellCuttingAlgorithm';
+} from '@/utils/print/printCutting';
+import { triangulateCellData } from '@/utils/cutting/cellCutting';
 import {
   checkCutCellData,
   checkTriangulated,
@@ -15,7 +15,7 @@ import {
   meshStats,
 } from './helpers/meshInvariants';
 import { makeBoxCell, boxVolume, boxIntersectionVolume } from './helpers/syntheticCells';
-import type { CutCellData } from '../../workers/types/workerOutput';
+import type { CutCellData } from '@/types/domain';
 
 // Inner cube half-size used throughout: h = 0.5, centered at world origin.
 const H = 0.5;

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import type { ReactElement } from 'react';
 import { Voro3D } from 'voro3d';
-import { Cell } from '../../voronoi/Cell';
+import { Cell } from './cell';
 
 type VoronoiCubeProps = {
   points: number[];

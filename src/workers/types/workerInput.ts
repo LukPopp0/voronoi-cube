@@ -1,10 +1,4 @@
-export interface CellDataInput {
-  x: number;
-  y: number;
-  z: number;
-  vertices: number[];
-  faces: number[][];
-}
+import { CellDataInput } from '@/types/domain';
 
 export interface WorkerPreview {
   cutInnerCube: boolean;

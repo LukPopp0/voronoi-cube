@@ -1,8 +1,7 @@
-import { BufferAttribute, BufferGeometry, Vector3 } from 'three';
-import type { VoroCell } from 'voro3d';
-import { CellDataInput } from '../workers/types/workerInput';
-import { CutCellData } from '../workers/types/workerOutput';
-import { ON_PLANE_TOL, PLANE_TOL, EPSILON } from './geometryConstants';
+import { Vector3 } from 'three';
+import { CellDataInput, CutCellData } from '@/types/domain';
+import { TriangulatedGeometry } from '@/utils/geometry/bufferGeometry';
+import { ON_PLANE_TOL, PLANE_TOL, EPSILON } from '@/utils/geometry/constants';
 import {
   ClipPlane,
   Polygon,
@@ -11,7 +10,7 @@ import {
   sortPolygonVertices,
   computeNewellNormalRaw,
   signedPlaneDistance,
-} from './geometryHelper';
+} from '@/utils/geometry/primitives';
 
 const EMPTY_CELL = (cell: CellDataInput): CutCellData => ({
   vertices: [],
@@ -223,9 +222,7 @@ export const cutCellCore = (
 /**
  * Triangulate CutCellData into positions/normals/indices arrays for rendering.
  */
-export const triangulateCellData = (
-  cellData: CutCellData,
-): { positions: Float32Array; normals: Float32Array; indices: Uint32Array } => {
+export const triangulateCellData = (cellData: CutCellData): TriangulatedGeometry => {
   if (cellData.vertices.length === 0 || cellData.faces.length === 0) {
     return {
       positions: new Float32Array([]),
@@ -290,27 +287,4 @@ export const triangulateCellData = (
     normals: new Float32Array(normals),
     indices: new Uint32Array(indices),
   };
-};
-
-/**
- * Shrink a Voronoi cell by moving each face inward by the destruction parameter.
- * Uses the half-space intersection method for clean, watertight results.
- * Returns a BufferGeometry for direct use in Three.js.
- */
-export const cutCell = (
-  cell: VoroCell,
-  destructionParameter: number,
-  cubeSize: number,
-): BufferGeometry => {
-  const cellData = cutCellCore(cell, destructionParameter, cubeSize);
-  const result = triangulateCellData(cellData);
-
-  const bg = new BufferGeometry();
-  if (result.positions.length > 0) {
-    bg.setAttribute('position', new BufferAttribute(result.positions, 3));
-    bg.setAttribute('normal', new BufferAttribute(result.normals, 3));
-    bg.setIndex(new BufferAttribute(result.indices, 1));
-  }
-
-  return bg;
 };

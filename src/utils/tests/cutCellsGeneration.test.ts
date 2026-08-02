@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import type { CutCellData } from '../../workers/types/workerOutput';
+import type { CutCellData } from '@/types/domain';
 
 /**
  * Regression for the "ghost cells in the exported STL" bug: `cutCells` used to be

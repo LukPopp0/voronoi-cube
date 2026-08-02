@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import type { VoroCell } from 'voro3d';
-import { cutCellCore, triangulateCellData } from '../cellCuttingAlgorithm';
+import { cutCellCore, triangulateCellData } from '@/utils/cutting/cellCutting';
 import { generateRealCells } from './helpers/realCellFixtures';
 import {
   checkCutCellData,

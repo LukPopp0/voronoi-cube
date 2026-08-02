@@ -6,8 +6,8 @@ import {
   polygonVolume,
   meshStats,
 } from './helpers/meshInvariants';
-import { triangulateCellData } from '../cellCuttingAlgorithm';
-import type { CutCellData } from '../../workers/types/workerOutput';
+import { triangulateCellData } from '@/utils/cutting/cellCutting';
+import type { CutCellData } from '@/types/domain';
 
 // --- Hand-built cube fixture -------------------------------------------------
 // Edge length 2 (from -1 to 1), 8 vertices, 6 quad faces, consistent outward
