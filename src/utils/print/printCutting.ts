@@ -1,6 +1,11 @@
 import { Vector3 } from 'three';
 import { CutCellData } from '@/types/domain';
-import { PLANE_TOL, ON_PLANE_TOL, EPSILON } from '@/utils/geometry/constants';
+import {
+  PLANE_TOL,
+  ON_PLANE_TOL,
+  EPSILON,
+  MIN_FRAGMENT_VOLUME_FRACTION,
+} from '@/utils/geometry/constants';
 import {
   ClipPlane,
   Polygon,
@@ -10,6 +15,7 @@ import {
   computeNewellNormal,
   computeNewellNormalRaw,
   computePolygonArea,
+  polygonVolume,
 } from '@/utils/geometry/primitives';
 
 // Re-export shared primitives that external call sites import from here.
@@ -659,6 +665,8 @@ export const prepareForPrint = (
     bottomCutoutSides = 6,
   } = options;
   const innerCubeHalfSize = (cubeSize * innerCubeRatio) / 2;
+  // Drop tiny fragments the cuts leave behind (unprintable, fall loose).
+  const minVolume = MIN_FRAGMENT_VOLUME_FRACTION * cubeSize ** 3;
 
   return cells
     .map(cell => {
@@ -680,5 +688,5 @@ export const prepareForPrint = (
       }
       return result;
     })
-    .filter(cell => cell.faces.length > 0);
+    .filter(cell => cell.faces.length > 0 && polygonVolume(cell.vertices, cell.faces) >= minVolume);
 };

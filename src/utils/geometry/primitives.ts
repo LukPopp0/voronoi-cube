@@ -193,3 +193,35 @@ export const getFaceNormal = (indices: number[], vertices: number[]): Vector3 =>
 
   return v0.clone().sub(v1).cross(v0.sub(v2)).normalize();
 };
+
+/**
+ * Signed volume of a closed polygon mesh, computed directly from its polygon
+ * faces (fan from face[0] per face, divergence theorem, sum/6). Positive for
+ * outward-wound faces. Plain flat-array math - no THREE allocation per vertex.
+ */
+export const polygonVolume = (vertices: number[], faces: number[][]): number => {
+  let sum = 0;
+  for (const face of faces) {
+    if (face.length < 3) continue;
+    const a = 3 * face[0];
+    const ax = vertices[a],
+      ay = vertices[a + 1],
+      az = vertices[a + 2];
+    for (let i = 1; i < face.length - 1; i++) {
+      const b = 3 * face[i];
+      const c = 3 * face[i + 1];
+      const bx = vertices[b],
+        by = vertices[b + 1],
+        bz = vertices[b + 2];
+      const cx = vertices[c],
+        cy = vertices[c + 1],
+        cz = vertices[c + 2];
+      // a . (b x c)
+      sum +=
+        ax * (by * cz - bz * cy) +
+        ay * (bz * cx - bx * cz) +
+        az * (bx * cy - by * cx);
+    }
+  }
+  return sum / 6;
+};

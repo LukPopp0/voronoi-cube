@@ -10,6 +10,7 @@ import { cutCellCore, triangulateCellData } from '@/utils/cutting/cellCutting';
 import { checkCutCellData, checkTriangulated, polygonVolume } from './helpers/meshInvariants';
 import { makeBoxCell } from './helpers/syntheticCells';
 import { generateRealCells } from './helpers/realCellFixtures';
+import { MIN_FRAGMENT_VOLUME_FRACTION } from '@/utils/geometry/constants';
 import type { CutCellData } from '@/types/domain';
 
 /**
@@ -455,5 +456,49 @@ describe('real cells: gap cut -> inner cube -> frustum', () => {
       );
       expect(polygonVolume(cell), cellLabel).toBeGreaterThanOrEqual(-1e-4);
     }
+  });
+
+  // Min-volume fragment filter: no survivor falls below the drop threshold.
+  it.each([WIDTH, 1.0])('drops sub-threshold fragments (width=%s)', width => {
+    const minVolume = MIN_FRAGMENT_VOLUME_FRACTION * SIZE ** 3;
+    const prepared = prepareForPrint(gapCutCells, SIZE, RATIO, {
+      cutInnerCube: true,
+      cutBottomHole: true,
+      bottomCutoutWidth: width,
+    });
+    for (const cell of prepared) {
+      expect(
+        polygonVolume(cell),
+        `width=${width} particleId=${cell.particleId}`,
+      ).toBeGreaterThanOrEqual(minVolume);
+    }
+  });
+});
+
+// --- Fragment filter: deterministic engage/keep boundary --------------------
+
+describe('min-volume fragment filter', () => {
+  // cutInnerCube/cutBottomHole off -> geometry unchanged, isolates the filter.
+  const noCut = { cutInnerCube: false, cutBottomHole: false };
+  const SIZE = 15;
+  const threshold = MIN_FRAGMENT_VOLUME_FRACTION * SIZE ** 3; // ~1.69
+
+  it('drops a cell below the volume threshold', () => {
+    const tiny = makeBoxCell([0, 0, 0], [1, 1, 1]); // volume 1 < threshold
+    expect(polygonVolume(tiny)).toBeLessThan(threshold);
+    expect(prepareForPrint([tiny], SIZE, 0.85, noCut)).toHaveLength(0);
+  });
+
+  it('keeps a cell above the volume threshold', () => {
+    const big = makeBoxCell([0, 0, 0], [2, 2, 2]); // volume 8 > threshold
+    expect(polygonVolume(big)).toBeGreaterThan(threshold);
+    expect(prepareForPrint([big], SIZE, 0.85, noCut)).toHaveLength(1);
+  });
+
+  it('scales the threshold with cube size', () => {
+    const cell = makeBoxCell([0, 0, 0], [1, 1, 1]); // volume 1
+    // Small cube -> threshold below 1 -> kept; large cube -> threshold above 1 -> dropped.
+    expect(prepareForPrint([cell], 5, 0.85, noCut)).toHaveLength(1); // thresh ~0.06
+    expect(prepareForPrint([cell], 20, 0.85, noCut)).toHaveLength(0); // thresh ~4.0
   });
 });

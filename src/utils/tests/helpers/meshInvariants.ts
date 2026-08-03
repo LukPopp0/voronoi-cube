@@ -1,5 +1,6 @@
 import { Vector3 } from 'three';
 import { CutCellData } from '@/types/domain';
+import { polygonVolume as polygonVolumeRaw } from '@/utils/geometry/primitives';
 
 /**
  * Reusable mesh-invariant checker for geometry produced by the cutting
@@ -471,20 +472,8 @@ export const signedVolume = (mesh: { positions: number[]; indices: number[] }): 
  * Signed volume computed directly from polygon faces (fan from face[0] per
  * face) - used for volume-conservation tests without triangulation.
  */
-export const polygonVolume = (cell: CutCellData): number => {
-  const verts = cell.vertices;
-  let sum = 0;
-  for (const face of cell.faces) {
-    if (face.length < 3) continue;
-    const v0 = vecAt(verts, face[0]);
-    for (let i = 1; i < face.length - 1; i++) {
-      const v1 = vecAt(verts, face[i]);
-      const v2 = vecAt(verts, face[i + 1]);
-      sum += v0.dot(v1.clone().cross(v2));
-    }
-  }
-  return sum / 6;
-};
+export const polygonVolume = (cell: CutCellData): number =>
+  polygonVolumeRaw(cell.vertices, cell.faces);
 
 // --- meshStats ---------------------------------------------------------------
 

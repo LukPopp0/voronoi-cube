@@ -120,7 +120,7 @@ export const useVoronoiStore = create<IVoronoiSettings>(set => {
       marginFactor: 0.5,
       innerCubeSize: 0.85,
       bottomCutoutSides: 8,
-      previewPrintCuts: false,
+      previewPrintCuts: true,
       showInnerCube: true,
       showBottomCutout: true,
     },
