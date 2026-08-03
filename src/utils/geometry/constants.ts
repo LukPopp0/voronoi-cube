@@ -53,3 +53,12 @@ export const ON_PLANE_TOL = PLANE_TOL;
 
 /** Decimal places for vertex-dedup keys; consistent with PLANE_TOL. */
 export const KEY_PRECISION = 7;
+
+/**
+ * Cells whose post-print-cut volume is below this fraction of the cube volume
+ * (`fraction * cubeSize^3`) are dropped as unprintable fragments in
+ * `prepareForPrint`. Targets the tiny chunks the bottom-cutout frustum leaves
+ * behind (mostly-consumed cells) that fall loose off the print. Tuned by eye
+ * via the `previewPrintCuts` debug toggle - single-line retune.
+ */
+export const MIN_FRAGMENT_VOLUME_FRACTION = 0.0005; // ~1.7 for cubeSize 15
